@@ -1,0 +1,22 @@
+{
+  "name": "contracts",
+  "version": "1.0.0",
+  "description": "Contracts for STAB",
+  "main": "index.js",
+  "scripts": {
+    "test": "test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/stableflect-finance-org/contracts.git"
+  },
+  "author": "StableFlect.Finance Organisation",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/stableflect-finance-org/contracts/issues"
+  },
+  "homepage": "https://github.com/stableflect-finance-org/contracts#readme",
+  "dependencies": {
+    "truffle": "^5.1.57"
+  }
+}
