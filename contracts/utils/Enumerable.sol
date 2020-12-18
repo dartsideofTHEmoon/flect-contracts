@@ -209,4 +209,39 @@ library EnumerableMap {
     function get(U32ToU256Map storage map, uint32 key, string memory errorMessage) internal view returns (uint256) {
         return _get(map._inner, key, errorMessage);
     }
+
+    /**
+     * @dev Adds value to an existing key if not exists adds to '0'
+     *
+     * Requirements:
+     *
+     * - Addition cannot overflow.
+     */
+    function add(U32ToU256Map storage map, uint32 key, uint256 value) internal {
+        uint256 newValue = value;
+        if (_contains(map._inner, key)) {
+            newValue = value + _get(map._inner, key);
+            require(c >= a, "EnumerableMap: addition overflow");
+        }
+
+        _set(map._inner, key, newValue);
+    }
+
+    /**
+     * @dev Subtracts value from existing key.
+     *
+     * Requirements:
+     *
+     * - Subtraction cannot overflow, result must be positive.
+     */
+    function sub(U32ToU256Map storage map, uint32 key, uint256 value) internal {
+        require(_contains(map._inner, key));
+        uint256 currentValue = _get(map._inner, key);
+        if (value == currentValue) {
+            _remove(map._inner, key);
+        } else {
+            require(value < currentValue, "EnumerableMap: subtraction overflow");
+            _set(map._inner, key, currentValue - value);
+        }
+    }
 }
