@@ -4,7 +4,8 @@
   "description": "Contracts for STAB",
   "main": "index.js",
   "scripts": {
-    "test": "test"
+    "test": "test",
+    "ganache": "ganache-cli --networkId $npm_package_config_ganache_networkId --allowUnlimitedContractSize --gasLimit $npm_package_config_ganache_gasLimit --gasPrice $npm_package_config_ganache_gasPrice --mnemonic \"$MNEMONIC\""
   },
   "repository": {
     "type": "git",
@@ -16,7 +17,15 @@
     "url": "https://github.com/stableflect-finance-org/contracts/issues"
   },
   "homepage": "https://github.com/stableflect-finance-org/contracts#readme",
-  "dependencies": {
+  "devDependencies": {
+    "ganache-cli": "^6.12.1",
     "truffle": "^5.1.57"
+  },
+  "config": {
+    "ganache": {
+      "networkId": 9999,
+      "gasPrice": 20000000000,
+      "gasLimit": 6500000
+    }
   }
 }
