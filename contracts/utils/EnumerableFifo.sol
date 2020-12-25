@@ -129,7 +129,7 @@ library EnumerableFifo {
     /**
      * @dev Gets sum of account balance.
      */
-    function _getSum(U32ToU256Queue storage map) internal view returns (uint256) {
+    function getSum(U32ToU256Queue storage map) internal view returns (uint256) {
         return map._inner._sum;
     }
 

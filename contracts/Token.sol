@@ -16,6 +16,8 @@ import "./utils/EnumerableFifo.sol";
 contract Token is Context, IERC20, Ownable {
     using SafeMath for uint256;
     using Address for address;
+    using EnumerableFifo for EnumerableFifo.U32ToU256Queue;
+    using EnumerableSet for EnumerableSet.AddressSet;
 
     // Base ERC20 variables
     string constant private _name = 'stableflect.finance';
@@ -29,18 +31,21 @@ contract Token is Context, IERC20, Ownable {
     uint256 private constant _initialReflectionSupply = (MAX - (MAX % _initialTotalSupply));
     uint256 private _totalSupply = _initialTotalSupply;
     uint256 private _reflectionTotal = _initialReflectionSupply;
+    uint32 private _epoch = 1;
 
     // Variables responsible for keeping user account balances
     mapping (address => mapping (address => uint256)) private _allowances;
     mapping (address => EnumerableFifo.U32ToU256Queue) private _netShareOwned;
     mapping (address => uint256) private _tokenOwned;
 
-    // Variables responsible
-    mapping (address => bool) private _isExcluded;
-    address[] private _excluded;
+    // Variables responsible for keeping address 'types'
+    EnumerableSet.AddressSet private _excluded;
     EnumerableSet.AddressSet private _included;
 
     constructor () public {
+        _netShareOwned[_msgSender()].add(_epoch, _initialReflectionSupply);
+        _included.add(_msgSender());
+        emit Transfer(address(0), _msgSender(), _initialTotalSupply);
     }
 
     function name() public view returns (string memory) {
@@ -55,12 +60,16 @@ contract Token is Context, IERC20, Ownable {
         return _decimals;
     }
 
+    function epoch() public view returns (uint32) {
+        return _epoch;
+    }
+
     function totalSupply() public view override returns (uint256) {
         return _totalSupply;
     }
 
     function balanceOf(address account) public view override returns (uint256) {
-        return 0;
+        return _netShareOwned[_msgSender()].getSum();
     }
 
     function transfer(address recipient, uint256 amount) public override returns (bool) {
