@@ -9,6 +9,7 @@ import "openzeppelin-solidity/contracts/GSN/Context.sol";
 import "openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 import "openzeppelin-solidity/contracts/utils/Address.sol";
+import "openzeppelin-solidity/contracts/utils/EnumerableSet.sol";
 import "openzeppelin-solidity/contracts/access/Ownable.sol";
 import "./utils/EnumerableFifo.sol";
 
@@ -16,13 +17,28 @@ contract Token is Context, IERC20, Ownable {
     using SafeMath for uint256;
     using Address for address;
 
-    string private _name = 'stableflect.finance';
-    string private _symbol = 'STAB';
-    uint8 private _decimals = 9;
+    // Base ERC20 variables
+    string constant private _name = 'stableflect.finance';
+    string constant private _symbol = 'STAB';
+    uint8 constant private _decimals = 9;
 
+    // Variables responsible for counting balances and network shares
+    uint256 private constant MAX = ~uint256(0);
+    uint256 private constant UNIT = 10**_decimals;
+    uint256 private constant _initialTotalSupply = 5 * 10**6 * UNIT;
+    uint256 private constant _initialReflectionSupply = (MAX - (MAX % _initialTotalSupply));
+    uint256 private _totalSupply = _initialTotalSupply;
+    uint256 private _reflectionTotal = _initialReflectionSupply;
+
+    // Variables responsible for keeping user account balances
     mapping (address => mapping (address => uint256)) private _allowances;
     mapping (address => EnumerableFifo.U32ToU256Queue) private _netShareOwned;
     mapping (address => uint256) private _tokenOwned;
+
+    // Variables responsible
+    mapping (address => bool) private _isExcluded;
+    address[] private _excluded;
+    EnumerableSet.AddressSet private _included;
 
     constructor () public {
     }
@@ -40,7 +56,7 @@ contract Token is Context, IERC20, Ownable {
     }
 
     function totalSupply() public view override returns (uint256) {
-        return 0;
+        return _totalSupply;
     }
 
     function balanceOf(address account) public view override returns (uint256) {
@@ -75,6 +91,10 @@ contract Token is Context, IERC20, Ownable {
     function decreaseAllowance(address spender, uint256 subtractedValue) public virtual returns (bool) {
         _approve(_msgSender(), spender, _allowances[_msgSender()][spender].sub(subtractedValue, "ERC20: decreased allowance below zero"));
         return true;
+    }
+
+    function _calcMaxReflection(uint256 totalSupply) private {
+        _reflectionTotal = (MAX - (MAX % totalSupply));
     }
 
     function _approve(address owner, address spender, uint256 amount) private {
