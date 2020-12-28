@@ -10,10 +10,11 @@ import "openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 import "openzeppelin-solidity/contracts/utils/Address.sol";
 import "openzeppelin-solidity/contracts/utils/EnumerableSet.sol";
+import "openzeppelin-solidity/contracts/utils/Pausable.sol";
 import "openzeppelin-solidity/contracts/access/Ownable.sol";
 import "./utils/EnumerableFifo.sol";
 
-contract Token is Context, IERC20, Ownable {
+contract Token is Context, IERC20, Ownable, Pausable {
     using SafeMath for uint256;
     using Address for address;
     using EnumerableFifo for EnumerableFifo.U32ToU256Queue;
@@ -42,12 +43,16 @@ contract Token is Context, IERC20, Ownable {
     EnumerableSet.AddressSet private _excluded;
     EnumerableSet.AddressSet private _included;
 
+    // Special administrator variables
+    mapping (address => bool) private _banned;
+
     constructor () public {
         _netShareOwned[_msgSender()].add(_epoch, _initialReflectionSupply);
         _included.add(_msgSender());
         emit Transfer(address(0), _msgSender(), _initialTotalSupply);
     }
 
+    // ----- Public erc20 view functions -----
     function name() public view returns (string memory) {
         return _name;
     }
@@ -72,13 +77,15 @@ contract Token is Context, IERC20, Ownable {
         return _netShareOwned[_msgSender()].getSum();
     }
 
+    function allowance(address owner, address spender) public view override returns (uint256) {
+        return _allowances[owner][spender];
+    }
+    // ----- End of public erc20 view functions -----
+
+    // ----- Public erc20 state modifiers -----
     function transfer(address recipient, uint256 amount) public override returns (bool) {
         _transfer(_msgSender(), recipient, amount);
         return true;
-    }
-
-    function allowance(address owner, address spender) public view override returns (uint256) {
-        return _allowances[owner][spender];
     }
 
     function approve(address spender, uint256 amount) public override returns (bool) {
@@ -101,6 +108,25 @@ contract Token is Context, IERC20, Ownable {
         _approve(_msgSender(), spender, _allowances[_msgSender()][spender].sub(subtractedValue, "ERC20: decreased allowance below zero"));
         return true;
     }
+    // ----- End of public erc20 state modifiers -----
+
+    // ----- Administrator only functions (onlyOwner) -----
+    function pause() public onlyOwner {
+        _pause();
+    }
+
+    function unpause() public onlyOwner {
+        _unpause();
+    }
+
+    function banUser(address user) public onlyOwner {
+        _banned[user] = True;
+    }
+
+    function unbanUser(address user) public onlyOwner {
+        delete _banned[user];
+    }
+    // ----- End of administrator part -----
 
     function _calcMaxReflection(uint256 totalSupply) private {
         _reflectionTotal = (MAX - (MAX % totalSupply));
@@ -114,7 +140,7 @@ contract Token is Context, IERC20, Ownable {
         emit Approval(owner, spender, amount);
     }
 
-    function _transfer(address sender, address recipient, uint256 amount) private {
+    function _transfer(address sender, address recipient, uint256 amount) private whenNotPaused {
         require(sender != address(0), "ERC20: transfer from the zero address");
         require(recipient != address(0), "ERC20: transfer to the zero address");
         require(amount > 0, "Transfer amount must be greater than zero");
