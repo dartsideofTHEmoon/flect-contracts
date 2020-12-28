@@ -153,14 +153,13 @@ library EnumerableFifo {
     }
 
     /**
-     * @dev Subtracts value from existing key.
+     * @dev Subtracts value from existing beginning of the queue.
      *
      * Requirements:
      *
      * - Subtraction cannot overflow, result must be positive.
      */
-    function sub(U32ToU256Queue storage map, uint32 key, uint256 value) internal {
-        require(key > 0);
+    function sub(U32ToU256Queue storage map, uint256 value) internal {
         require(value > 0);
         require(value <= map._inner._sum);
 

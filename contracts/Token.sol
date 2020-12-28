@@ -32,6 +32,7 @@ contract Token is Context, IERC20, Ownable, Pausable {
     uint256 private constant _initialReflectionSupply = (MAX - (MAX % _initialTotalSupply));
     uint256 private _totalSupply = _initialTotalSupply;
     uint256 private _reflectionTotal = _initialReflectionSupply;
+    uint256 private _transactionFeeEpoch = 0;
     uint32 private _epoch = 1;
 
     // Variables responsible for keeping user account balances
@@ -120,7 +121,7 @@ contract Token is Context, IERC20, Ownable, Pausable {
     }
 
     function banUser(address user) public onlyOwner {
-        _banned[user] = True;
+        _banned[user] = true;
     }
 
     function unbanUser(address user) public onlyOwner {
@@ -145,6 +146,95 @@ contract Token is Context, IERC20, Ownable, Pausable {
         require(recipient != address(0), "ERC20: transfer to the zero address");
         require(amount > 0, "Transfer amount must be greater than zero");
 
-        // TODO implement
+        bool senderExcluded = _excluded.contains(sender);
+        bool recipientExcluded = _excluded.contains(recipient);
+
+        if (!senderExcluded && !recipientExcluded) {
+            _transferStandard(sender, recipient, amount);
+        } else if (!senderExcluded && recipientExcluded) {
+            _transferToExcluded(sender, recipient, amount);
+        } else if (senderExcluded && !recipientExcluded) {
+            _transferFromExcluded(sender, recipient, amount);
+        } else {
+            _transferBothExcluded(sender, recipient, amount);
+        }
+    }
+
+    function _transferStandard(address sender, address recipient, uint256 tAmount) private {
+        (uint256 rAmount, uint256 rTransferAmount, uint256 rFee, uint256 tTransferAmount, uint256 tFee) = _getValues(tAmount);
+        _netShareOwned[sender].sub(rAmount);
+        _netShareOwned[recipient].add(_epoch, rTransferAmount);
+        _reflectFee(rFee, tFee);
+        emit Transfer(sender, recipient, tTransferAmount);
+    }
+
+    function _transferToExcluded(address sender, address recipient, uint256 tAmount) private {
+        (uint256 rAmount, uint256 rTransferAmount, uint256 rFee, uint256 tTransferAmount, uint256 tFee) = _getValues(tAmount);
+        _netShareOwned[sender].sub(rAmount);
+        _tokenOwned[recipient] = _tokenOwned[recipient].add(tTransferAmount);
+        _netShareOwned[recipient].add(_epoch, rTransferAmount);
+        _reflectFee(rFee, tFee);
+        emit Transfer(sender, recipient, tTransferAmount);
+    }
+
+    function _transferFromExcluded(address sender, address recipient, uint256 tAmount) private {
+        (uint256 rAmount, uint256 rTransferAmount, uint256 rFee, uint256 tTransferAmount, uint256 tFee) = _getValues(tAmount);
+        _tokenOwned[sender] = _tokenOwned[sender].sub(tAmount);
+        _netShareOwned[sender].sub(rAmount);
+        _netShareOwned[recipient].add(_epoch, rTransferAmount);
+        _reflectFee(rFee, tFee);
+        emit Transfer(sender, recipient, tTransferAmount);
+    }
+
+    function _transferBothExcluded(address sender, address recipient, uint256 tAmount) private {
+        (uint256 rAmount, uint256 rTransferAmount, uint256 rFee, uint256 tTransferAmount, uint256 tFee) = _getValues(tAmount);
+        _tokenOwned[sender] = _tokenOwned[sender].sub(tAmount);
+        _netShareOwned[sender].sub(rAmount);
+        _tokenOwned[recipient] = _tokenOwned[recipient].add(tTransferAmount);
+        _netShareOwned[recipient].add(_epoch, rTransferAmount);
+        _reflectFee(rFee, tFee);
+        emit Transfer(sender, recipient, tTransferAmount);
+    }
+
+    function _reflectFee(uint256 rFee, uint256 tFee) private {
+        _reflectionTotal = _reflectionTotal.sub(rFee);
+        _transactionFeeEpoch = _transactionFeeEpoch.add(tFee);
+    }
+
+    function _getValues(uint256 tAmount) private view returns (uint256, uint256, uint256, uint256, uint256) {
+        (uint256 tTransferAmount, uint256 tFee) = _getValuesInToken(tAmount);
+        uint256 currentRate =  _getRate();
+        (uint256 rAmount, uint256 rTransferAmount, uint256 rFee) = _getRValues(tAmount, tFee, currentRate);
+        return (rAmount, rTransferAmount, rFee, tTransferAmount, tFee);
+    }
+
+    function _getValuesInToken(uint256 tAmount) private pure returns (uint256, uint256) {
+        uint256 tFee = tAmount.div(500);
+        uint256 tTransferAmount = tAmount.sub(tFee);
+        return (tTransferAmount, tFee);
+    }
+
+    function _getRValues(uint256 tAmount, uint256 tFee, uint256 currentRate) private pure returns (uint256, uint256, uint256) {
+        uint256 rAmount = tAmount.mul(currentRate);
+        uint256 rFee = tFee.mul(currentRate);
+        uint256 rTransferAmount = rAmount.sub(rFee);
+        return (rAmount, rTransferAmount, rFee);
+    }
+
+    function _getRate() private view returns(uint256) {
+        (uint256 rSupply, uint256 tSupply) = _getCurrentSupply();
+        return rSupply.div(tSupply);
+    }
+
+    function _getCurrentSupply() private view returns(uint256, uint256) {
+        uint256 rSupply = _reflectionTotal;
+        uint256 tSupply = _totalSupply;
+        for (uint256 i = 0; i < _excluded.length(); i++) {
+            if (_netShareOwned[_excluded.at(i)].getSum() > rSupply || _tokenOwned[_excluded.at(i)] > tSupply) return (_reflectionTotal, _totalSupply);
+            rSupply = rSupply.sub(_netShareOwned[_excluded.at(i)].getSum());
+            tSupply = tSupply.sub(_tokenOwned[_excluded.at(i)]);
+        }
+        if (rSupply < _reflectionTotal.div(_totalSupply)) return (_reflectionTotal, _totalSupply);
+        return (rSupply, tSupply);
     }
 }
