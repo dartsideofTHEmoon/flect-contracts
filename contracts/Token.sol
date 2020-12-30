@@ -20,31 +20,35 @@ contract Token is Context, IERC20, Ownable, Pausable {
     using EnumerableFifo for EnumerableFifo.U32ToU256Queue;
     using EnumerableSet for EnumerableSet.AddressSet;
 
-    // Base ERC20 variables
+    // I. Base ERC20 variables
     string constant private _name = 'stableflect.finance';
     string constant private _symbol = 'STAB';
     uint8 constant private _decimals = 9;
 
-    // Variables responsible for counting balances and network shares
+    // II. Variables responsible for counting balances and network shares
     uint256 private constant MAX = ~uint256(0);
     uint256 private constant UNIT = 10**_decimals;
     uint256 private constant _initialTotalSupply = 5 * 10**6 * UNIT;
     uint256 private constant _initialReflectionSupply = (MAX - (MAX % _initialTotalSupply));
     uint256 private _totalSupply = _initialTotalSupply;
     uint256 private _reflectionTotal = _initialReflectionSupply;
+    // Fees since beginning of an epoch.
     uint256 private _transactionFeeEpoch = 0;
+    // Epoch number.
     uint32 private _epoch = 1;
+    // How long transaction history to keep (in days).
+    uint32 private _maxHistoryLen = 90;
 
-    // Variables responsible for keeping user account balances
+    // III. Variables responsible for keeping user account balances
     mapping (address => mapping (address => uint256)) private _allowances;
     mapping (address => EnumerableFifo.U32ToU256Queue) private _netShareOwned;
     mapping (address => uint256) private _tokenOwned;
 
-    // Variables responsible for keeping address 'types'
+    // IV. Variables responsible for keeping address 'types'
     EnumerableSet.AddressSet private _excluded;
     EnumerableSet.AddressSet private _included;
 
-    // Special administrator variables
+    // V. Special administrator variables
     mapping (address => bool) private _banned;
 
     constructor () public {
@@ -52,6 +56,7 @@ contract Token is Context, IERC20, Ownable, Pausable {
         _included.add(_msgSender());
         emit Transfer(address(0), _msgSender(), _initialTotalSupply);
     }
+
 
     // ----- Public erc20 view functions -----
     function name() public view returns (string memory) {
@@ -75,13 +80,15 @@ contract Token is Context, IERC20, Ownable, Pausable {
     }
 
     function balanceOf(address account) public view override returns (uint256) {
-        return _netShareOwned[_msgSender()].getSum();
+        if (_excluded.contains(account)) return _tokenOwned[account];
+        return tokenFromReflection(_netShareOwned[account].getSum());
     }
 
     function allowance(address owner, address spender) public view override returns (uint256) {
         return _allowances[owner][spender];
     }
     // ----- End of public erc20 view functions -----
+
 
     // ----- Public erc20 state modifiers -----
     function transfer(address recipient, uint256 amount) public override returns (bool) {
@@ -111,6 +118,29 @@ contract Token is Context, IERC20, Ownable, Pausable {
     }
     // ----- End of public erc20 state modifiers -----
 
+
+    // ----- Public view functions for additional features -----
+    function isExcluded(address account) public view returns (bool) {
+        return _excluded.contains(account);
+    }
+
+    function isIncluded(address account) public view returns (bool) {
+        return _included.contains(account);
+    }
+
+    function tokenFromReflection(uint256 reflectionAmount) public view returns(uint256) {
+        require(reflectionAmount <= _reflectionTotal, "Amount must be less than total reflections");
+        uint256 currentRate =  _getRate();
+        return reflectionAmount.div(currentRate);
+    }
+    // ----- End of public view functions for additional features -----
+
+
+    // ----- Public additional features state modifiers -----
+
+    // ----- End of public additional features state modifiers -----
+
+
     // ----- Administrator only functions (onlyOwner) -----
     function pause() public onlyOwner {
         _pause();
@@ -122,10 +152,35 @@ contract Token is Context, IERC20, Ownable, Pausable {
 
     function banUser(address user) public onlyOwner {
         _banned[user] = true;
+        if (!_excluded.contains(user)) {
+            excludeAccount(user);
+        }
     }
 
-    function unbanUser(address user) public onlyOwner {
+    function unbanUser(address user, bool includeUser) public onlyOwner {
         delete _banned[user];
+        if (includeUser) {
+            includeAccount(user);
+        }
+    }
+
+    function excludeAccount(address account) external onlyOwner {
+        require(!_excluded.contains(account), "Account is already excluded");
+        uint256 reflectionOwned = _netShareOwned[account].getSum();
+        if(reflectionOwned > 0) {
+            _tokenOwned[account] = tokenFromReflection(reflectionOwned);
+            _included.remove(account);
+        }
+        _excluded.add(account);
+    }
+
+    function includeAccount(address account) external onlyOwner {
+        require(_excluded.contains(account), "Account isn't excluded");
+        require(!_included.contains(account), "Account is already included");
+
+        _included.add(account);
+        _excluded.remove(account);
+        _tokenOwned[account] = 0;
     }
     // ----- End of administrator part -----
 
@@ -145,18 +200,36 @@ contract Token is Context, IERC20, Ownable, Pausable {
         require(sender != address(0), "ERC20: transfer from the zero address");
         require(recipient != address(0), "ERC20: transfer to the zero address");
         require(amount > 0, "Transfer amount must be greater than zero");
+        require(!_banned[sender], "User banned");
 
         bool senderExcluded = _excluded.contains(sender);
         bool recipientExcluded = _excluded.contains(recipient);
 
-        if (!senderExcluded && !recipientExcluded) {
-            _transferStandard(sender, recipient, amount);
-        } else if (!senderExcluded && recipientExcluded) {
-            _transferToExcluded(sender, recipient, amount);
-        } else if (senderExcluded && !recipientExcluded) {
-            _transferFromExcluded(sender, recipient, amount);
+        if (senderExcluded) {
+            if (recipientExcluded) {
+                _transferBothExcluded(sender, recipient, amount);
+            } else {
+                _transferFromExcluded(sender, recipient, amount);
+                _included.add(recipient);
+            }
+
+            if (_tokenOwned[sender] == 0) {
+                _excluded.remove(sender);
+            }
         } else {
-            _transferBothExcluded(sender, recipient, amount);
+            if (recipientExcluded) {
+                _transferToExcluded(sender, recipient, amount);
+            } else {
+                _transferStandard(sender, recipient, amount);
+                _included.add(recipient);
+            }
+
+            if (_netShareOwned[sender].getSum() == 0) {
+                _included.remove(sender);
+                delete _netShareOwned[sender];
+            } else {
+                _netShareOwned[sender].flatten(_getMinEpoch());
+            }
         }
     }
 
@@ -236,5 +309,13 @@ contract Token is Context, IERC20, Ownable, Pausable {
         }
         if (rSupply < _reflectionTotal.div(_totalSupply)) return (_reflectionTotal, _totalSupply);
         return (rSupply, tSupply);
+    }
+
+    function _getMinEpoch() private view returns(uint32) {
+        if (_epoch <= _maxHistoryLen) {
+            return 1; // Epoch counts from 1.
+        } else {
+            return _epoch - _maxHistoryLen;
+        }
     }
 }
