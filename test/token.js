@@ -36,13 +36,11 @@ describe('Initialization', async () => {
     it('should transfer 5M tokens to the deployer', async () => {
         (await this.instance.balanceOf.call(this.deployer)).should.be.bignumber.eq(INTIAL_SUPPLY);
         const events = await this.instance.getPastEvents();
-        console.log(events);
         const log = events[1];  // First one is OwnershipTransferred from 'Ownable'
         expect(log.event).to.eq('Transfer');
         expect(log.args.from).to.eq(ZERO_ADDRESS);
         expect(log.args.to).to.eq(this.deployer);
         log.args.value.should.be.bignumber.eq(INTIAL_SUPPLY);
-
     });
 
     it('should set the owner', async () => {
@@ -79,9 +77,9 @@ describe('Initialization', async () => {
     });
 });
 
-describe('Banning', function () {
+describe('Admin actions', function () {
     beforeEach(async () => {
-        [this.instance, this.deployer] = await BeforeEach();
+        [this.instance, this.deployer, this.receiver] = await BeforeEach();
     });
 
     it('ban user', async () => {
@@ -94,5 +92,65 @@ describe('Banning', function () {
 
         await expectRevert.unspecified(this.instance.transfer(accounts[1], 1, {from: this.deployer}), 'User banned');
     });
+
+    it('paused token cannot send transaction', async () => {
+        const receipt = await this.instance.pause({from: this.deployer});
+        expectEvent(receipt, 'Paused', {account: this.deployer});
+
+        await expectRevert.unspecified(this.instance.transfer(accounts[1], 1, {from: this.deployer}),
+            'Pausable: paused');
+    });
+
+    it('exclude-include account balances', async () => {
+        const preExcludeBalance = await this.instance.balanceOf(this.deployer);
+        await this.instance.excludeAccount(this.deployer, {from: this.deployer});
+        expect(await this.instance.isExcluded(this.deployer)).to.eq(true);
+        expect(await this.instance.isIncluded(this.deployer)).to.eq(false);
+        const postExcludeBalance = await this.instance.balanceOf(this.deployer);
+        await this.instance.includeAccount(this.deployer, {from: this.deployer});
+        expect(await this.instance.isExcluded(this.deployer)).to.eq(false);
+        expect(await this.instance.isIncluded(this.deployer)).to.eq(true);
+        const postReIncludeBalance = await this.instance.balanceOf(this.deployer);
+
+        preExcludeBalance.should.bignumber.eq(postExcludeBalance);
+        postExcludeBalance.should.bignumber.eq(postReIncludeBalance);
+    });
 });
 
+describe('Transactions', function () {
+    beforeEach(async () => {
+        [this.instance, this.deployer, this.receiver] = await BeforeEach();
+    });
+
+    it('simple transaction', async () => {
+        await this.instance.transfer(this.receiver, INTIAL_SUPPLY.div(new BN(2)), {from: this.deployer});
+        const receiverFunds = await this.instance.balanceOf(this.receiver);
+        const deployerFunds = await this.instance.balanceOf(this.deployer);
+
+        receiverFunds.should.bignumber.eq(new BN(2497497497497497));
+        deployerFunds.should.bignumber.eq(new BN(2502502502502502));
+
+        receiverFunds.add(deployerFunds).should.bignumber.eq(INTIAL_SUPPLY.sub(new BN(1)));
+    });
+
+    it('simple transaction and send back', async () => {
+        await this.instance.transfer(this.receiver, INTIAL_SUPPLY.div(new BN(2)), {from: this.deployer});
+        await this.instance.transfer(this.deployer, new BN(2497497497497497), {from: this.receiver});
+        const receiverFunds = await this.instance.balanceOf(this.receiver);
+        const deployerFunds = await this.instance.balanceOf(this.deployer);
+
+        receiverFunds.should.bignumber.eq(new BN(0));
+        deployerFunds.should.bignumber.eq(INTIAL_SUPPLY.sub(new BN(1)));
+    });
+
+    it('more simple transactions', async () => {
+        await this.instance.transfer(this.receiver, INTIAL_SUPPLY.div(new BN(2)), {from: this.deployer});
+        const receiverFunds = await this.instance.balanceOf(this.receiver);
+        const deployerFunds = await this.instance.balanceOf(this.deployer);
+
+        receiverFunds.should.bignumber.eq(new BN(2497497497497497));
+        deployerFunds.should.bignumber.eq(new BN(2502502502502502));
+
+        receiverFunds.add(deployerFunds).should.bignumber.eq(INTIAL_SUPPLY.sub(new BN(1)));
+    });
+});
