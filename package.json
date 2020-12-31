@@ -4,7 +4,7 @@
   "description": "Contracts for STAB",
   "main": "index.js",
   "scripts": {
-    "test": "test",
+    "test": "mocha --exit --recursive",
     "ganache": "ganache-cli --networkId $npm_package_config_ganache_networkId --allowUnlimitedContractSize --gasLimit $npm_package_config_ganache_gasLimit --gasPrice $npm_package_config_ganache_gasPrice --mnemonic \"$MNEMONIC\"",
     "start": "concurrently \"npm run ganache\" \"npm run migrate\"",
     "migrate": "rm -rf build && truffle migrate --reset --compile-all --network development"
@@ -20,8 +20,11 @@
   },
   "homepage": "https://github.com/stableflect-finance-org/contracts#readme",
   "devDependencies": {
+    "@openzeppelin/test-environment": "^0.1.9",
+    "@openzeppelin/test-helpers": "^0.5.10",
     "concurrently": "^5.3.0",
     "ganache-cli": "^6.12.1",
+    "mocha": "^8.1.2",
     "truffle": "^5.1.57"
   },
   "config": {

@@ -1,60 +1,98 @@
 const BN = require("bn.js");
+const { accounts, contract } = require('@openzeppelin/test-environment');
+const { expectEvent, expectRevert } = require('@openzeppelin/test-helpers');
+const { expect } = require('chai');
 
-const Token = artifacts.require("./Token.sol");
+const Token = contract.fromArtifact("Token");
+
+require('chai').should();
 require('chai')
     .use(require('chai-bn')(BN))
     .should();
 
 
 const DECIMALS = 9;
-const INTIAL_SUPPLY = toUFrgDenomination(5 * 10 ** 6);
+const INTIAL_SUPPLY = toUnitsDenomination(5 * 10 ** 6);
+const MAX_UINT256 = new BN(2).pow(new BN(255));
+const INITIAL_REFLECTION = MAX_UINT256.sub(MAX_UINT256.umod(INTIAL_SUPPLY));
 const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
 
-function toUFrgDenomination (x) {
+function toUnitsDenomination (x) {
     return new BN(x).mul(new BN(10 ** DECIMALS));
 }
 
-contract("Token:Initialization", (accounts) => {
-    let instance, deployer;
-    beforeEach('Sets up contract instance', async () => {
-        instance = await Token.new();
-        deployer = accounts[0];
+async function BeforeEach() {
+    const [deployer, receiver] = accounts;
+    const instance = await Token.new({from: deployer});
+
+    return [instance, deployer, receiver];
+}
+
+describe('Initialization', async () => {
+    beforeEach(async () => {
+        [this.instance, this.deployer, this.receiver] = await BeforeEach();
     });
 
-    it('should transfer 5M tokens to the deployer', async function () {
-        (await instance.balanceOf.call(deployer)).should.be.bignumber.eq(INTIAL_SUPPLY);
-        const events = await instance.getPastEvents();
+    it('should transfer 5M tokens to the deployer', async () => {
+        (await this.instance.balanceOf.call(this.deployer)).should.be.bignumber.eq(INTIAL_SUPPLY);
+        const events = await this.instance.getPastEvents();
         console.log(events);
         const log = events[1];  // First one is OwnershipTransferred from 'Ownable'
         expect(log.event).to.eq('Transfer');
         expect(log.args.from).to.eq(ZERO_ADDRESS);
-        expect(log.args.to).to.eq(deployer);
+        expect(log.args.to).to.eq(this.deployer);
         log.args.value.should.be.bignumber.eq(INTIAL_SUPPLY);
+
     });
 
-    it('should set the owner', async function () {
-        expect(await instance.owner.call()).to.eq(deployer);
+    it('should set the owner', async () => {
+        expect(await this.instance.owner()).to.equal(this.deployer);
     });
 
     it('should have correct name name', async () => {
-        expect(await instance.name.call()).to.eq('stableflect.finance');
+        expect(await this.instance.name.call()).to.eq('stableflect.finance');
     });
 
     it('should have correct ticker', async () => {
-        expect(await instance.symbol.call()).to.eq('STAB');
+        expect(await this.instance.symbol.call()).to.eq('STAB');
     });
 
     it('should have correct decimals', async () => {
-        const decimals = await instance.decimals();
-        assert.equal(decimals, DECIMALS);
+        (await this.instance.decimals()).should.bignumber.eq(new BN(DECIMALS));
     });
 
     it('should have epoch set to 1', async () => {
-        (await instance.epoch.call()).eq(1);
+        (await this.instance.epoch.call()).eq(1);
     });
 
-    it('should set initial supply', async() => {
-        (await instance.totalSupply.call()).should.bignumber.eq(INTIAL_SUPPLY);
+    it('should set initial supply', async () => {
+        (await this.instance.totalSupply.call()).should.bignumber.eq(INTIAL_SUPPLY);
     });
 
+    it('shouldn\'t be excluded, but included', async () => {
+        expect(await this.instance.isExcluded(this.deployer)).to.eq(false);
+        expect(await this.instance.isIncluded(this.deployer)).to.eq(true);
+    });
+
+    it('shouldn\'t be paused', async () => {
+        expect(await this.instance.paused.call({from: this.deployer})).to.eq(false);
+    });
 });
+
+describe('Banning', function () {
+    beforeEach(async () => {
+        [this.instance, this.deployer] = await BeforeEach();
+    });
+
+    it('ban user', async () => {
+        await this.instance.banUser(this.deployer, {from: this.deployer});
+        expect(await this.instance.isExcluded(this.deployer)).to.eq(true);
+    });
+
+    it('banned cannot send transaction', async () => {
+        await this.instance.banUser(this.deployer, {from: this.deployer});
+
+        await expectRevert.unspecified(this.instance.transfer(accounts[1], 1, {from: this.deployer}), 'User banned');
+    });
+});
+

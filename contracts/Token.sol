@@ -164,7 +164,7 @@ contract Token is Context, IERC20, Ownable, Pausable {
         }
     }
 
-    function excludeAccount(address account) external onlyOwner {
+    function excludeAccount(address account) public onlyOwner {
         require(!_excluded.contains(account), "Account is already excluded");
         uint256 reflectionOwned = _netShareOwned[account].getSum();
         if(reflectionOwned > 0) {
@@ -174,7 +174,7 @@ contract Token is Context, IERC20, Ownable, Pausable {
         _excluded.add(account);
     }
 
-    function includeAccount(address account) external onlyOwner {
+    function includeAccount(address account) public onlyOwner {
         require(_excluded.contains(account), "Account isn't excluded");
         require(!_included.contains(account), "Account is already included");
 
@@ -184,8 +184,8 @@ contract Token is Context, IERC20, Ownable, Pausable {
     }
     // ----- End of administrator part -----
 
-    function _calcMaxReflection(uint256 totalSupply) private {
-        _reflectionTotal = (MAX - (MAX % totalSupply));
+    function _calcMaxReflection(uint256 totalSupply_) private {
+        _reflectionTotal = (MAX - (MAX % totalSupply_));
     }
 
     function _approve(address owner, address spender, uint256 amount) private {
