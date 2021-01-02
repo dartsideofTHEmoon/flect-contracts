@@ -3,6 +3,8 @@
 pragma solidity >=0.6.0 <0.8.0;
 
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
+import "./UInt256Lib.sol";
+import "./SafeMathInt.sol";
 /**
  * @dev Library for managing hodlings time.
  *
@@ -10,6 +12,8 @@ import "openzeppelin-solidity/contracts/math/SafeMath.sol";
  */
 library EnumerableFifo {
     using SafeMath for uint256;
+    using SafeMathInt for int256;
+    using UInt256Lib for uint256;
 
     struct Entry {
         uint32 _key;
@@ -120,6 +124,18 @@ library EnumerableFifo {
         map._entries[map._lastKey]._value = newValue;
     }
 
+    /**
+     * @dev Updates a value of the last entry in a queue.
+     */
+    function _updateValueAtKey(Map storage map, uint32 key, uint256 newValue) private {
+        require(key > 0);
+        uint256 oldValue = map._entries[key]._value;
+        require(oldValue > 0); // Check if this value exists.
+
+        map._sum = map._sum.sub(oldValue).add(newValue);
+        map._entries[key]._value = newValue;
+    }
+
     // U32ToU256Map
 
     struct U32ToU256Queue {
@@ -207,5 +223,37 @@ library EnumerableFifo {
         if (cumulativeValue > 0) {
             _enqueue(map._inner, minAllowedKey, cumulativeValue);
         }
+    }
+
+    /*
+    * @dev Calculates user adjusted rebase factor.
+    * @param maxIncentiveEpoch Epoch which gives user maxFactor.
+    * @param factorDecreasePerStep User incentive drops by that number each epoch.
+    * @param maxFactor Maximum incentive possible for epoch <= minAllowedKey.
+    * @param currentNetMultiplier
+    */
+    function rebaseUserFunds(U32ToU256Queue storage map, uint32 maxIncentiveEpoch, uint256 factorDecreasePerEpoch, uint256 maxFactor, int256 currentNetMultiplier) internal returns (int256) {
+        int256 originalSum = map._inner._sum.toInt256Safe();
+
+        (uint32 currentKey, uint32 nextKey, uint256 currentValue) = _getFirst(map._inner);
+        while (currentKey != 0) {
+            uint256 rebaseFactor = maxFactor;
+            if (currentKey > maxIncentiveEpoch) {
+                uint32 epochDiff = currentKey - maxIncentiveEpoch;
+                uint256 decreaseValue = factorDecreasePerEpoch.mul(epochDiff);
+                rebaseFactor = maxFactor.sub(decreaseValue, "Max user adjusted rebase factor cannot be lower than 0");
+            }
+
+            _updateValueAtKey(map._inner, currentKey, _adjustValue(currentValue, rebaseFactor, currentNetMultiplier));
+
+            (currentKey, nextKey, currentValue) = _get(map._inner, nextKey);
+        }
+
+        int256 newSum = map._inner._sum.toInt256Safe();
+        return originalSum.sub(newSum);
+    }
+
+    function _adjustValue(uint256 value, uint256 rebaseFactor, int256 currentNetMultiplier) view internal returns (uint256) {
+        return value;
     }
 }
