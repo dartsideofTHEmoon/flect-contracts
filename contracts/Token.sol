@@ -12,10 +12,15 @@ import "openzeppelin-solidity/contracts/utils/Address.sol";
 import "openzeppelin-solidity/contracts/utils/EnumerableSet.sol";
 import "openzeppelin-solidity/contracts/utils/Pausable.sol";
 import "openzeppelin-solidity/contracts/access/Ownable.sol";
+import "./utils/SafeMathInt.sol";
+import "./utils/UInt256Lib.sol";
 import "./utils/EnumerableFifo.sol";
+import "./utils/Rebaseable.sol";
 
-contract Token is Context, IERC20, Ownable, Pausable {
+contract Token is Context, IERC20, Ownable, Pausable, Rebaseable {
     using SafeMath for uint256;
+    using SafeMathInt for int256;
+    using UInt256Lib for uint256;
     using Address for address;
     using EnumerableFifo for EnumerableFifo.U32ToU256Queue;
     using EnumerableSet for EnumerableSet.AddressSet;
@@ -34,10 +39,6 @@ contract Token is Context, IERC20, Ownable, Pausable {
     uint256 private _reflectionTotal = _initialReflectionSupply;
     // Fees since beginning of an epoch.
     uint256 private _transactionFeeEpoch = 0;
-    // Epoch number.
-    uint32 private _epoch = 1;
-    // How long transaction history to keep (in days).
-    uint32 private _maxHistoryLen = 90;
 
     // III. Variables responsible for keeping user account balances
     mapping (address => mapping (address => uint256)) private _allowances;
@@ -57,17 +58,26 @@ contract Token is Context, IERC20, Ownable, Pausable {
         emit Transfer(address(0), _msgSender(), _initialTotalSupply);
     }
 
+    // VI. User special incentives parameters.
+    //TODO add ability to adjust it later.
+    uint256 private constant maxIncentive = 3 * UNIT; // UNIT == no incentive, 2*UNIT = 100% bigger rebase.
+    uint256 private constant decreasePerEpoch = UNIT / 100 * 2; // 0.1% * 2 = 0.02 each epoch => 100 days to get +2x
+    // Epoch number.
+    uint32 private _epoch = 1;
+    // How long transaction history to keep (in days).
+    uint32 private constant _maxHistoryLen = uint32((maxIncentive - UNIT) / decreasePerEpoch); // 2x / 0.02
+
 
     // ----- Public erc20 view functions -----
-    function name() public view returns (string memory) {
+    function name() public pure returns (string memory) {
         return _name;
     }
 
-    function symbol() public view returns (string memory) {
+    function symbol() public pure returns (string memory) {
         return _symbol;
     }
 
-    function decimals() public view returns (uint8) {
+    function decimals() public pure returns (uint8) {
         return _decimals;
     }
 
@@ -136,9 +146,33 @@ contract Token is Context, IERC20, Ownable, Pausable {
     // ----- End of public view functions for additional features -----
 
 
-    // ----- Public additional features state modifiers -----
+    // ----- Public rebase state modifiers -----
+    function setMonetaryPolicy(address monetaryPolicy_) internal onlyOwner {
+        _setMonetaryPolicy(monetaryPolicy_);
+    }
 
-    // ----- End of public additional features state modifiers -----
+    function rebase(uint256 epoch, uint256 exchangeRate, uint256 targetRate, int256 rebaseLag) external override onlyMonetaryPolicy returns (uint256) {
+        if (targetRate == exchangeRate) {
+            emit LogRebase(epoch, _totalSupply);
+            return _totalSupply;
+        }
+
+        (uint32 maxIncentiveEpoch, uint256 currentNetMultiplier, uint256 maxFactor) = _getRebaseFactors(exchangeRate, targetRate, rebaseLag);
+
+        int256 supplyChange = 0;
+        for (uint256 i = 0; i < _included.length(); i++) {
+            int256 userSupplyChange = _netShareOwned[_included.at(i)].rebaseUserFunds(maxIncentiveEpoch, decreasePerEpoch, maxFactor, currentNetMultiplier, UNIT);
+            supplyChange.add(userSupplyChange);
+        }
+
+        if (supplyChange >= 0) {
+            _totalSupply.add(uint256(supplyChange));
+        } else {
+            _totalSupply.sub(uint256(-supplyChange));
+        }
+        return _totalSupply;
+    }
+    // ----- End of rebase state modifiers -----
 
 
     // ----- Administrator only functions (onlyOwner) -----
@@ -311,11 +345,35 @@ contract Token is Context, IERC20, Ownable, Pausable {
         return (rSupply, tSupply);
     }
 
-    function _getMinEpoch() private view returns(uint32) {
+    function _getMinEpoch() internal view returns(uint32) {
         if (_epoch <= _maxHistoryLen) {
             return 1; // Epoch counts from 1.
         } else {
             return _epoch - _maxHistoryLen;
         }
     }
+
+    // ----- Private rebase state modifiers -----
+    function _getRebaseFactors(uint256 exchangeRate, uint256 targetRate, int256 rebaseLag) internal view returns(uint32, uint256, uint256) {
+        // 1. minEpoch
+        uint32 minEpoch = _getMinEpoch();
+
+        // 2. currentNetMultiplier
+        int256 targetRateSigned = targetRate.toInt256Safe();
+        // (exchangeRate - targetRate) / targetRate => multiplier in <-UNIT, UNIT> range.
+        int256 rebaseDelta = UNIT.toInt256Safe().mul(exchangeRate.toInt256Safe().sub(targetRateSigned)).div(targetRateSigned);
+        // Apply the Dampening factor and construct multiplier.
+
+        require(rebaseLag > 0); //TODO this actually can be lower, but need to be implemented. When this factor is lower threat it as leverage.
+        uint256 currentNetMultiplier = uint256(UNIT.toInt256Safe().add(rebaseDelta.div(rebaseLag)));
+
+        // 3. maxFactor
+        require(_epoch >= minEpoch);
+        uint32 epochsFromMin = _epoch - minEpoch;
+        uint256 maxFactor = UNIT.add(decreasePerEpoch.mul(epochsFromMin));
+
+        return (minEpoch, currentNetMultiplier, maxFactor);
+    }
+
+    // ----- End of private rebase state modifiers -----
 }

@@ -262,7 +262,7 @@ library EnumerableFifo {
     * @param currentNetMultiplier Base net rebase multiplier. It is 10**DECIMALS based value.
     * @param valuesBase Treat this multiplier as '1' in float operations. It is equal to 10**DECIMALS.
     */
-    function _adjustValue(uint256 value, uint256 userIncentiveFactor, uint256 currentNetMultiplier, uint256 valuesBase) view internal returns (uint256) {
+    function _adjustValue(uint256 value, uint256 userIncentiveFactor, uint256 currentNetMultiplier, uint256 valuesBase) pure internal returns (uint256) {
         if (currentNetMultiplier < valuesBase) {
             // Multiplier is bigger than '1 * 10**DECIMALS', so we have to decrease funds.
             // for e.g.

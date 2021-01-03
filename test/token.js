@@ -3,7 +3,7 @@ const { accounts, contract } = require('@openzeppelin/test-environment');
 const { expectEvent, expectRevert } = require('@openzeppelin/test-helpers');
 const { expect } = require('chai');
 
-const Token = contract.fromArtifact("Token");
+const Token = contract.fromArtifact("TokenMock");
 
 require('chai').should();
 require('chai')
@@ -13,6 +13,7 @@ require('chai')
 
 const DECIMALS = 9;
 const INTIAL_SUPPLY = toUnitsDenomination(5 * 10 ** 6);
+const UNIT = toUnitsDenomination(1);
 const MAX_UINT256 = new BN(2).pow(new BN(255));
 const INITIAL_REFLECTION = MAX_UINT256.sub(MAX_UINT256.umod(INTIAL_SUPPLY));
 const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
@@ -152,5 +153,22 @@ describe('Transactions', function () {
         deployerFunds.should.bignumber.eq(new BN(2502502502502502));
 
         receiverFunds.add(deployerFunds).should.bignumber.eq(INTIAL_SUPPLY.sub(new BN(1)));
+    });
+});
+
+describe('Rebase parameters', async () => {
+    beforeEach(async () => {
+        [this.instance, this.deployer, this.receiver] = await BeforeEach();
+    });
+
+    it('Test rebase factors', async() => {
+        const exchangePrice = toUnitsDenomination(11);
+        const targetPrice = toUnitsDenomination(7);
+        const values = await this.instance._getRebaseFactorsMock.call(exchangePrice, targetPrice, 5);
+        const {0: minEpoch, 1: currentNetMultiplier, 2: maxFactor} = values;
+
+        minEpoch.eq(1);
+        currentNetMultiplier.should.bignumber.eq(new BN(1114285714));
+        maxFactor.should.bignumber.eq(UNIT);
     });
 });
