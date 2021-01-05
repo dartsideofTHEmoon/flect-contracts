@@ -171,4 +171,35 @@ describe('Rebase parameters', async () => {
         currentNetMultiplier.should.bignumber.eq(new BN(1114285714));
         maxFactor.should.bignumber.eq(UNIT);
     });
+
+    it('Test rebase factors (more epochs)', async() => {
+        await this.instance._setEpochMock(13);
+        const decreasePerEpoch = await this.instance._getDecreasePerEpochMock();
+
+        const exchangePrice = toUnitsDenomination(7);
+        const targetPrice = toUnitsDenomination(11);
+        const values = await this.instance._getRebaseFactorsMock.call(exchangePrice, targetPrice, 5);
+        const {0: minEpoch, 1: currentNetMultiplier, 2: maxFactor} = values;
+
+        minEpoch.eq(1);
+        currentNetMultiplier.should.bignumber.eq(new BN(927272728));
+        maxFactor.should.bignumber.eq(UNIT.add(new BN(decreasePerEpoch * (13 - 1))));
+    });
+
+    it('Test rebase factor (max incentive)', async() => {
+        await this.instance._setEpochMock(500);
+        const decreasePerEpoch = await this.instance._getDecreasePerEpochMock();
+        const maxIncetive = await this.instance._getMaxIncentiveMock();
+        const maxHistoryLen = await this.instance._getMaxHistoryLenMock();
+
+        const exchangePrice = toUnitsDenomination(150);
+        const targetPrice = toUnitsDenomination(123);
+        const values = await this.instance._getRebaseFactorsMock.call(exchangePrice, targetPrice, 5);
+        const {0: minEpoch, 1: currentNetMultiplier, 2: maxFactor} = values;
+
+        minEpoch.eq(1);
+        currentNetMultiplier.should.bignumber.eq(new BN(1043902439));
+        maxFactor.should.bignumber.eq(UNIT.add(new BN(decreasePerEpoch * maxHistoryLen)));
+        maxFactor.should.bignumber.eq(maxIncetive);
+    });
 });

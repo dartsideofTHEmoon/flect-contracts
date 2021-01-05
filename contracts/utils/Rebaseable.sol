@@ -35,13 +35,12 @@ abstract contract Rebaseable {
 
     /**
      * @dev Notifies STAB contract about a new rebase cycle.
-     * @param epoch The next epoch number.
      * @param exchangeRate Current STAB exchange rate.this
      * @param targetRate STAB price rebase target.
      * @param rebaseLag Rebase lag when rebaseLag > 1 or rebase leverage (when rebase lag < -1).
      * @return The total number of tokens after the supply adjustment.
      */
-    function rebase(uint256 epoch, uint256 exchangeRate, uint256 targetRate, int256 rebaseLag) external virtual returns (uint256);
+    function rebase(uint256 exchangeRate, uint256 targetRate, int256 rebaseLag) external virtual returns (uint256);
 
     /**
     * @dev Emitted when rebase started.

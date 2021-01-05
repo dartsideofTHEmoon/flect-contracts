@@ -60,12 +60,12 @@ contract Token is Context, IERC20, Ownable, Pausable, Rebaseable {
 
     // VI. User special incentives parameters.
     //TODO add ability to adjust it later.
-    uint256 private constant maxIncentive = 3 * UNIT; // UNIT == no incentive, 2*UNIT = 100% bigger rebase.
-    uint256 private constant decreasePerEpoch = UNIT / 100 * 2; // 0.1% * 2 = 0.02 each epoch => 100 days to get +2x
+    uint256 internal constant _maxIncentive = 3 * UNIT; // UNIT == no incentive, 2*UNIT = 100% bigger rebase.
+    uint256 internal constant _decreasePerEpoch = UNIT / 100 * 2; // 0.1% * 2 = 0.02 each epoch => 100 days to get +2x
     // Epoch number.
-    uint32 private _epoch = 1;
+    uint32 internal _epoch = 1;
     // How long transaction history to keep (in days).
-    uint32 private constant _maxHistoryLen = uint32((maxIncentive - UNIT) / decreasePerEpoch); // 2x / 0.02
+    uint32 internal constant _maxHistoryLen = uint32((_maxIncentive - UNIT) / _decreasePerEpoch); // 2x / 0.02
 
 
     // ----- Public erc20 view functions -----
@@ -151,9 +151,10 @@ contract Token is Context, IERC20, Ownable, Pausable, Rebaseable {
         _setMonetaryPolicy(monetaryPolicy_);
     }
 
-    function rebase(uint256 epoch, uint256 exchangeRate, uint256 targetRate, int256 rebaseLag) external override onlyMonetaryPolicy returns (uint256) {
+    function rebase(uint256 exchangeRate, uint256 targetRate, int256 rebaseLag) external override onlyMonetaryPolicy returns (uint256) {
         if (targetRate == exchangeRate) {
-            emit LogRebase(epoch, _totalSupply);
+            emit LogRebase(_epoch, _totalSupply);
+            ++_epoch;
             return _totalSupply;
         }
 
@@ -161,7 +162,7 @@ contract Token is Context, IERC20, Ownable, Pausable, Rebaseable {
 
         int256 supplyChange = 0;
         for (uint256 i = 0; i < _included.length(); i++) {
-            int256 userSupplyChange = _netShareOwned[_included.at(i)].rebaseUserFunds(maxIncentiveEpoch, decreasePerEpoch, maxFactor, currentNetMultiplier, UNIT);
+            int256 userSupplyChange = _netShareOwned[_included.at(i)].rebaseUserFunds(maxIncentiveEpoch, _decreasePerEpoch, maxFactor, currentNetMultiplier, UNIT);
             supplyChange.add(userSupplyChange);
         }
 
@@ -170,6 +171,9 @@ contract Token is Context, IERC20, Ownable, Pausable, Rebaseable {
         } else {
             _totalSupply.sub(uint256(-supplyChange));
         }
+
+        emit LogRebase(_epoch, _totalSupply);
+        ++_epoch;
         return _totalSupply;
     }
     // ----- End of rebase state modifiers -----
@@ -370,7 +374,7 @@ contract Token is Context, IERC20, Ownable, Pausable, Rebaseable {
         // 3. maxFactor
         require(_epoch >= minEpoch);
         uint32 epochsFromMin = _epoch - minEpoch;
-        uint256 maxFactor = UNIT.add(decreasePerEpoch.mul(epochsFromMin));
+        uint256 maxFactor = UNIT.add(_decreasePerEpoch.mul(epochsFromMin));
 
         return (minEpoch, currentNetMultiplier, maxFactor);
     }
