@@ -23,7 +23,7 @@ library EnumerableFifo {
 
     struct Map {
         // Storage of map keys and values
-        mapping (uint32 => Entry) _entries;
+        mapping(uint32 => Entry) _entries;
 
         uint256 _sum;
 
@@ -42,7 +42,7 @@ library EnumerableFifo {
         if (map._lastKey != 0) {
             map._entries[map._lastKey]._nextKey = key;
         }
-        map._entries[key] = Entry({ _key: key, _nextKey: 0, _value: value });
+        map._entries[key] = Entry({_key : key, _nextKey : 0, _value : value});
         map._lastKey = key;
         map._sum = map._sum.add(value);
     }
@@ -59,7 +59,7 @@ library EnumerableFifo {
         Entry storage entry = map._entries[map._firstKey];
         uint32 firstKey = map._firstKey;
         uint256 value = entry._value;
-        if (entry._nextKey == 0) { // Removing last entry in queue.
+        if (entry._nextKey == 0) {// Removing last entry in queue.
             map._firstKey = 0;
             map._lastKey = 0;
             map._sum = 0;
@@ -130,7 +130,8 @@ library EnumerableFifo {
     function _updateValueAtKey(Map storage map, uint32 key, uint256 newValue) private {
         require(key > 0);
         uint256 oldValue = map._entries[key]._value;
-        require(oldValue > 0); // Check if this value exists.
+        require(oldValue > 0);
+        // Check if this value exists.
 
         map._sum = map._sum.sub(oldValue).add(newValue);
         map._entries[key]._value = newValue;
@@ -227,13 +228,17 @@ library EnumerableFifo {
 
     /*
     * @dev Rebases user funds and returns value diff.
+    * @param preRebaseRate Current user shares vs all tokens in network.
+    * @param postRebaseRate User tokens share after rebase (it is used to add earned fee to user account for good).
     * @param maxIncentiveEpoch Epoch which gives user maxFactor.
     * @param factorDecreasePerStep User incentive drops by that number each epoch. It is 10**DECIMALS based value.
     * @param maxFactor Maximum incentive possible for epoch <= minAllowedKey. It is 10**DECIMALS based value.
-    * @param currentNetMultiplier Base net rebase multiplier. It is 10**DECIMALS based value.
-    * @param valuesBase Treat this multiplier as '1' in float operations. It is equal to 10**DECIMALS.
+    * @param valuesArray 4 uint256 values (preRebaseRate, postRebaseRate, currentNetMultiplier, UNIT).
+        Array is used to avoid EVM limit for 16 local variables.
     */
-    function rebaseUserFunds(U32ToU256Queue storage map, uint32 maxIncentiveEpoch, uint256 factorDecreasePerEpoch, uint256 maxFactor, uint256 currentNetMultiplier, uint256 valuesBase) internal returns (int256) {
+    function rebaseUserFunds(U32ToU256Queue storage map, uint32 maxIncentiveEpoch, uint256 factorDecreasePerEpoch,
+        uint256 maxFactor, uint256[4] memory valuesArray) internal returns (int256) {
+
         int256 originalSum = map._inner._sum.toInt256Safe();
 
         (uint32 currentKey, uint32 nextKey, uint256 currentValue) = _getFirst(map._inner);
@@ -245,7 +250,7 @@ library EnumerableFifo {
                 rebaseFactor = maxFactor.sub(decreaseValue, "Max user adjusted rebase factor cannot be lower than 0");
             }
 
-            _updateValueAtKey(map._inner, currentKey, _adjustValue(currentValue, rebaseFactor, currentNetMultiplier, valuesBase));
+            _updateValueAtKey(map._inner, currentKey, _adjustValue(map, currentValue, rebaseFactor, valuesArray));
 
             (currentKey, nextKey, currentValue) = _get(map._inner, nextKey);
         }
@@ -259,26 +264,42 @@ library EnumerableFifo {
     * @param maxIncentiveEpoch Epoch which gives user maxFactor.
     * @param factorDecreasePerStep User incentive drops by that number each epoch. It is 10**DECIMALS based value.
     * @param maxFactor Maximum incentive possible for epoch <= minAllowedKey. It is 10**DECIMALS based value.
-    * @param currentNetMultiplier Base net rebase multiplier. It is 10**DECIMALS based value.
-    * @param valuesBase Treat this multiplier as '1' in float operations. It is equal to 10**DECIMALS.
+    * @param valuesArray 4 uint256 values (preRebaseRate, postRebaseRate, currentNetMultiplier, UNIT).
     */
-    function _adjustValue(uint256 value, uint256 userIncentiveFactor, uint256 currentNetMultiplier, uint256 valuesBase) pure internal returns (uint256) {
+    function _adjustValue(U32ToU256Queue storage map, uint256 value, uint256 userIncentiveFactor,
+        uint256[4] memory valuesArray) view internal returns (uint256) {
+
+        uint256 currentNetMultiplier = valuesArray[2];
+        uint256 valuesBase = valuesArray[3];
+
+        value = value.div(valuesArray[0]);
+        // Unwraps amount from 'reflection' to token.
         if (currentNetMultiplier < valuesBase) {
-            // Multiplier is bigger than '1 * 10**DECIMALS', so we have to decrease funds.
+            // Multiplier is lower than '1 * 10**DECIMALS', so we have to decrease funds.
             // for e.g.
             // userIncentiveFactor == 4 * 10**DECIMALS, currentNetMultiplier == 0.8 * 10**DECIMALS, valuesBase == 10**DECIMALS
-            uint256 multiplier = valuesBase.sub(currentNetMultiplier); // (1 - 0.8) * 10**DECIMALS
-            multiplier = multiplier.mul(valuesBase).div(userIncentiveFactor); // 0.2 * 10**DECIMALS * 10**DECIMALS / (4 * 10**DECIMALS) => 0.05 * 10**DECIMALS
-            multiplier = valuesBase.sub(multiplier); // (1 - 0.05) * 10**DECIMALS
-            return value.mul(multiplier).div(valuesBase); // newValue = oldValue * (0.95 * 10**DECIMALS) / 10**DECIMALS
+            uint256 multiplier = valuesBase.sub(currentNetMultiplier);
+            // (1 - 0.8) * 10**DECIMALS
+            multiplier = multiplier.mul(valuesBase).div(userIncentiveFactor);
+            // 0.2 * 10**DECIMALS * 10**DECIMALS / (4 * 10**DECIMALS) => 0.05 * 10**DECIMALS
+            multiplier = valuesBase.sub(multiplier);
+            // (1 - 0.05) * 10**DECIMALS
+            value = value.mul(multiplier).div(valuesBase);
+            // newValue = oldValue * (0.95 * 10**DECIMALS) / 10**DECIMALS
         } else {
             // Multiplier is bigger than '1 * 10**DECIMALS', so we have to increase funds.
             // for e.g.
             // userIncentiveFactor == 4 * 10**DECIMALS, currentNetMultiplier == 1.15 * 10**DECIMALS, valuesBase == 10**DECIMALS
-            uint256 multiplier = currentNetMultiplier.sub(valuesBase); // (1.15 - 1) * 10**DECIMALS
-            multiplier = multiplier.mul(userIncentiveFactor).div(valuesBase); // 0.15 * 10**DECIMALS * 4 * 10**DECIMALS / 10**DECIMALS => 0.6 * 10**DECIMALS
-            multiplier = multiplier.add(valuesBase); // 0.6 * 10**DECIMALS + 10**DECIMALS = 1.6 * 10**DECIMALS
-            return value.mul(multiplier).div(valuesBase);
+            uint256 multiplier = currentNetMultiplier.sub(valuesBase);
+            // (1.15 - 1) * 10**DECIMALS
+            multiplier = multiplier.mul(userIncentiveFactor).div(valuesBase);
+            // 0.15 * 10**DECIMALS * 4 * 10**DECIMALS / 10**DECIMALS => 0.6 * 10**DECIMALS
+            multiplier = multiplier.add(valuesBase);
+            // 0.6 * 10**DECIMALS + 10**DECIMALS = 1.6 * 10**DECIMALS
+            value = value.mul(multiplier).div(valuesBase);
         }
+        // Wraps amount with 'reflection' with a new rate. New rate is bigger, because user earned fee (if there was at
+        // least 1 transaction in passing epoch).
+        return value.mul(valuesArray[1]);
     }
 }

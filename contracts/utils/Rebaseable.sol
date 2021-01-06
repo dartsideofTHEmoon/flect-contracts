@@ -45,7 +45,7 @@ abstract contract Rebaseable {
     /**
     * @dev Emitted when rebase started.
     */
-    event LogRebase(uint256 indexed epoch, uint256 totalSupply);
+    event LogRebase(uint256 indexed epoch, uint256 totalSupply, uint256 feeInEpoch);
 
     /**
     * @dev Emitted when monetary policy address changed.

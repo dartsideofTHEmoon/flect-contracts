@@ -33,10 +33,8 @@ contract Token is Context, IERC20, Ownable, Pausable, Rebaseable {
     // II. Variables responsible for counting balances and network shares
     uint256 private constant MAX = ~uint256(0);
     uint256 private constant UNIT = 10**_decimals;
-    uint256 private constant _initialTotalSupply = 5 * 10**6 * UNIT;
-    uint256 private constant _initialReflectionSupply = (MAX - (MAX % _initialTotalSupply));
-    uint256 private _totalSupply = _initialTotalSupply;
-    uint256 private _reflectionTotal = _initialReflectionSupply;
+    uint256 private _totalSupply;
+    uint256 private _reflectionTotal;
     // Fees since beginning of an epoch.
     uint256 private _transactionFeeEpoch = 0;
 
@@ -53,7 +51,13 @@ contract Token is Context, IERC20, Ownable, Pausable, Rebaseable {
     mapping (address => bool) private _banned;
 
     constructor () public {
-        _netShareOwned[_msgSender()].add(_epoch, _initialReflectionSupply);
+        uint256 _initialTotalSupply = 5 * 10**6 * UNIT;
+
+        _totalSupply = _initialTotalSupply;
+        _reflectionTotal = _calcMaxReflection(_totalSupply);
+
+        uint256 _initialReflectionSupply = (MAX - (MAX % _initialTotalSupply));
+        _netShareOwned[_msgSender()].add(_epoch, _reflectionTotal);
         _included.add(_msgSender());
         emit Transfer(address(0), _msgSender(), _initialTotalSupply);
     }
@@ -153,16 +157,21 @@ contract Token is Context, IERC20, Ownable, Pausable, Rebaseable {
 
     function rebase(uint256 exchangeRate, uint256 targetRate, int256 rebaseLag) external override onlyMonetaryPolicy returns (uint256) {
         if (targetRate == exchangeRate) {
-            emit LogRebase(_epoch, _totalSupply);
-            ++_epoch;
+            _finalizeRebase();
             return _totalSupply;
         }
 
         (uint32 maxIncentiveEpoch, uint256 currentNetMultiplier, uint256 maxFactor) = _getRebaseFactors(exchangeRate, targetRate, rebaseLag);
 
+        uint256[4] memory valuesArray;
+        valuesArray[0] = _getRate();
+        valuesArray[1] = _getPostRebaseRate();
+        valuesArray[2] = currentNetMultiplier;
+        valuesArray[3] = UNIT;
+
         int256 supplyChange = 0;
         for (uint256 i = 0; i < _included.length(); i++) {
-            int256 userSupplyChange = _netShareOwned[_included.at(i)].rebaseUserFunds(maxIncentiveEpoch, _decreasePerEpoch, maxFactor, currentNetMultiplier, UNIT);
+            int256 userSupplyChange = _netShareOwned[_included.at(i)].rebaseUserFunds(maxIncentiveEpoch, _decreasePerEpoch, maxFactor, valuesArray);
             supplyChange.add(userSupplyChange);
         }
 
@@ -172,8 +181,7 @@ contract Token is Context, IERC20, Ownable, Pausable, Rebaseable {
             _totalSupply.sub(uint256(-supplyChange));
         }
 
-        emit LogRebase(_epoch, _totalSupply);
-        ++_epoch;
+        _finalizeRebase();
         return _totalSupply;
     }
     // ----- End of rebase state modifiers -----
@@ -222,8 +230,9 @@ contract Token is Context, IERC20, Ownable, Pausable, Rebaseable {
     }
     // ----- End of administrator part -----
 
-    function _calcMaxReflection(uint256 totalSupply_) private {
-        _reflectionTotal = (MAX - (MAX % totalSupply_));
+    function _calcMaxReflection(uint256 totalSupply_) private view returns (uint256){
+        // TODO we have to change it to lower value, so positive rebases are possible.
+        return MAX - (MAX % totalSupply_);
     }
 
     function _approve(address owner, address spender, uint256 amount) private {
@@ -333,19 +342,19 @@ contract Token is Context, IERC20, Ownable, Pausable, Rebaseable {
     }
 
     function _getRate() private view returns(uint256) {
-        (uint256 rSupply, uint256 tSupply) = _getCurrentSupply();
+        (uint256 rSupply, uint256 tSupply) = _getCurrentSupply(_reflectionTotal);
         return rSupply.div(tSupply);
     }
 
-    function _getCurrentSupply() private view returns(uint256, uint256) {
-        uint256 rSupply = _reflectionTotal;
+    function _getCurrentSupply(uint256 reflectionTotal_) private view returns(uint256, uint256) {
+        uint256 rSupply = reflectionTotal_;
         uint256 tSupply = _totalSupply;
         for (uint256 i = 0; i < _excluded.length(); i++) {
-            if (_netShareOwned[_excluded.at(i)].getSum() > rSupply || _tokenOwned[_excluded.at(i)] > tSupply) return (_reflectionTotal, _totalSupply);
+            if (_netShareOwned[_excluded.at(i)].getSum() > rSupply || _tokenOwned[_excluded.at(i)] > tSupply) return (reflectionTotal_, _totalSupply);
             rSupply = rSupply.sub(_netShareOwned[_excluded.at(i)].getSum());
             tSupply = tSupply.sub(_tokenOwned[_excluded.at(i)]);
         }
-        if (rSupply < _reflectionTotal.div(_totalSupply)) return (_reflectionTotal, _totalSupply);
+        if (rSupply < reflectionTotal_.div(_totalSupply)) return (reflectionTotal_, _totalSupply);
         return (rSupply, tSupply);
     }
 
@@ -379,5 +388,16 @@ contract Token is Context, IERC20, Ownable, Pausable, Rebaseable {
         return (minEpoch, currentNetMultiplier, maxFactor);
     }
 
+    function _finalizeRebase() internal {
+        emit LogRebase(_epoch, _totalSupply, _transactionFeeEpoch);
+        ++_epoch;
+        _transactionFeeEpoch = 0;
+        _reflectionTotal = _calcMaxReflection(_totalSupply);
+    }
+
+    function _getPostRebaseRate() private view returns(uint256) {
+        (uint256 rSupply, uint256 tSupply) = _getCurrentSupply(_calcMaxReflection(_totalSupply));
+        return rSupply.div(tSupply);
+    }
     // ----- End of private rebase state modifiers -----
 }
