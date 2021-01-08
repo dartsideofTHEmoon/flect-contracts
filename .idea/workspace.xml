@@ -2,9 +2,12 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="bfd7ec5c-86a2-409a-b8e3-b9dc306e100a" name="Default Changelist" comment="">
+      <change afterPath="$PROJECT_DIR$/contracts/mocks/EnumerableFifoTest.sol" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/test/enumerableFifo.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/test/simulation/supply_precision.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/package-lock.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/package.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/contracts/Token.sol" beforeDir="false" afterPath="$PROJECT_DIR$/contracts/Token.sol" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/contracts/utils/EnumerableFifo.sol" beforeDir="false" afterPath="$PROJECT_DIR$/contracts/utils/EnumerableFifo.sol" afterDir="false" />
     </list>
     <ignored path="$PROJECT_DIR$/.tmp/" />
     <ignored path="$PROJECT_DIR$/temp/" />
@@ -18,46 +21,46 @@
   <component name="FileEditorManager">
     <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
       <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/contracts/utils/EnumerableFifo.sol">
+        <entry file="file://$PROJECT_DIR$/contracts/Token.sol">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="572">
-              <caret line="126" column="5" selection-start-line="126" selection-start-column="5" selection-end-line="126" selection-end-column="5" />
+            <state relative-caret-position="-2">
+              <caret line="49" column="16" selection-start-line="49" selection-start-column="16" selection-end-line="49" selection-end-column="16" />
             </state>
           </provider>
         </entry>
       </file>
       <file pinned="false" current-in-tab="true">
-        <entry file="file://$PROJECT_DIR$/contracts/Token.sol">
+        <entry file="file://$PROJECT_DIR$/contracts/mocks/EnumerableFifoTest.sol">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="210">
-              <caret line="14" column="22" lean-forward="true" selection-start-line="14" selection-start-column="22" selection-end-line="14" selection-end-column="22" />
+            <state relative-caret-position="144">
+              <caret line="14" column="40" selection-start-line="14" selection-start-column="40" selection-end-line="14" selection-end-column="40" />
             </state>
           </provider>
         </entry>
       </file>
       <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/node_modules/openzeppelin-solidity/contracts/GSN/Context.sol">
+        <entry file="file://$PROJECT_DIR$/contracts/utils/EnumerableFifo.sol">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="210">
-              <caret line="14" column="20" selection-start-line="14" selection-start-column="20" selection-end-line="14" selection-end-column="20" />
+            <state relative-caret-position="-289">
+              <caret line="178" selection-start-line="171" selection-end-line="178" />
             </state>
           </provider>
         </entry>
       </file>
       <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/package.json">
+        <entry file="file://$PROJECT_DIR$/test/token.js">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="445">
-              <caret line="34" column="23" selection-start-line="34" selection-start-column="23" selection-end-line="34" selection-end-column="23" />
+            <state relative-caret-position="349">
+              <caret line="227" selection-start-line="227" selection-end-line="227" />
             </state>
           </provider>
         </entry>
       </file>
       <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/truffle-config.js">
+        <entry file="file://$PROJECT_DIR$/test/enumerableFifo.js">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="405">
-              <caret line="27" column="63" selection-start-line="27" selection-start-column="63" selection-end-line="27" selection-end-column="63" />
+            <state relative-caret-position="305">
+              <caret line="34" column="54" lean-forward="true" selection-start-line="34" selection-start-column="54" selection-end-line="34" selection-end-column="54" />
             </state>
           </provider>
         </entry>
@@ -67,37 +70,54 @@
   <component name="FileTemplateManagerImpl">
     <option name="RECENT_TEMPLATES">
       <list>
+        <option value="JavaScript File" />
         <option value="Solidity Contract" />
       </list>
     </option>
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>_length</find>
-      <find>toDeleteIndex</find>
-      <find>U32ToU256Map</find>
-      <find>_tokenOwned</find>
-      <find>tOwned</find>
-      <find>_rOwned</find>
-      <find>_netShareOwned</find>
-      <find>reflect</find>
-      <find>reflect(</find>
-      <find>reflectionFromToken</find>
+      <find>supplyChange.add</find>
+      <find>_totalSupply.add(supplyChange)</find>
+      <find>AddressSet</find>
+      <find>rate</find>
+      <find>factorDecreasePerEpoch</find>
+      <find>emit</find>
+      <find>maxHistory</find>
+      <find>_getRebaseFactors</find>
+      <find>_epoch</find>
+      <find>_initialReflectionSupply</find>
+      <find>getRate</find>
+      <find>fee</find>
       <find>_getRate</find>
-      <find>_tFeeTotal</find>
-      <find>_rTotal</find>
-      <find>truffle</find>
-      <find>compil</find>
-      <find>script</find>
-      <find>exclude</find>
-      <find>https://github.com/OpenZeppelin/</find>
-      <find>blob/v3.3.0/</find>
-      <find>openzeppelin-contracts</find>
+      <find>_getCurrentSupply</find>
+      <find>_calc</find>
+      <find>_getPostRebaseRate</find>
+      <find>_calcMaxReflection</find>
+      <find>rebaseUserFunds</find>
+      <find>MAX_UINT256</find>
+      <find>onlyMone</find>
+      <find>setMonetaryPolicy</find>
+      <find>function rebase</find>
+      <find>balanceOf</find>
+      <find>await</find>
+      <find>Amount must be less than total reflections</find>
+      <find>_reflectionTotal</find>
+      <find>_total</find>
+      <find>rebase</find>
+      <find>_updateValueAtKey</find>
+      <find>tokenFromReflection</find>
     </findStrings>
     <replaceStrings>
       <replace>U32ToU256Queue</replace>
       <replace>_netShareOwned</replace>
       <replace>openzeppelin-solidity</replace>
+      <replace>_tokenTotal</replace>
+      <replace>_reflectionTotal</replace>
+      <replace>_transactionFeeEpoch</replace>
+      <replace>_totalSupply</replace>
+      <replace>this.deployer</replace>
+      <replace>await this.instance</replace>
     </replaceStrings>
   </component>
   <component name="Git.Settings">
@@ -107,15 +127,34 @@
     <option name="CHANGED_PATHS">
       <list>
         <option value="$PROJECT_DIR$/README.md" />
-        <option value="$PROJECT_DIR$/.gitignore" />
         <option value="$PROJECT_DIR$/contracts/Enumerable.sol" />
         <option value="$PROJECT_DIR$/contracts/utils/Balancesss.sol" />
         <option value="$PROJECT_DIR$/contracts/utils/Balances.sol" />
         <option value="$PROJECT_DIR$/contracts/utils/Enumerable.sol" />
-        <option value="$PROJECT_DIR$/contracts/utils/EnumerableFifo.sol" />
+        <option value="$PROJECT_DIR$/migrations/1_initial_migration.js" />
+        <option value="$PROJECT_DIR$/.gitignore" />
         <option value="$PROJECT_DIR$/truffle-config.js" />
+        <option value="$PROJECT_DIR$/contracts/utils/TokenBackup.sol" />
+        <option value="$PROJECT_DIR$/migrations/2_deploy_contracts.js" />
+        <option value="$PROJECT_DIR$/contracts/utils/EnumerableMap.sol" />
+        <option value="$PROJECT_DIR$/contracts/utils/EnumerableAdd.sol" />
+        <option value="$PROJECT_DIR$/contracts/utils/2.sol" />
+        <option value="$PROJECT_DIR$/contracts/utils/EnumerableList.sol" />
+        <option value="$PROJECT_DIR$/contracts/utils/MyToken.sol" />
+        <option value="$PROJECT_DIR$/contracts/TokenBackup.sol" />
+        <option value="$PROJECT_DIR$/contracts/MyToken.sol" />
         <option value="$PROJECT_DIR$/package.json" />
+        <option value="$PROJECT_DIR$/contracts/utils/UInt256Lib.sol" />
+        <option value="$PROJECT_DIR$/contracts/utils/SafeMathInt.sol" />
+        <option value="$PROJECT_DIR$/contracts/utils/IRebase.sol" />
+        <option value="$PROJECT_DIR$/test/simulation/supply_precision.js" />
+        <option value="$PROJECT_DIR$/contracts/mocks/TokenMock.sol" />
+        <option value="$PROJECT_DIR$/test/token.js" />
+        <option value="$PROJECT_DIR$/contracts/utils/Rebaseable.sol" />
+        <option value="$PROJECT_DIR$/contracts/utils/EnumerableFifo.sol" />
         <option value="$PROJECT_DIR$/contracts/Token.sol" />
+        <option value="$PROJECT_DIR$/contracts/mocks/EnumerableFifoTest.sol" />
+        <option value="$PROJECT_DIR$/test/enumerableFifo.js" />
       </list>
     </option>
   </component>
@@ -123,9 +162,10 @@
     <option name="directoryName" value="rUUhVnEY" />
   </component>
   <component name="ProjectFrameBounds">
-    <option name="y" value="23" />
+    <option name="x" value="-413" />
+    <option name="y" value="-1138" />
     <option name="width" value="1680" />
-    <option name="height" value="1027" />
+    <option name="height" value="1039" />
   </component>
   <component name="ProjectView">
     <navigator proportions="" version="1">
@@ -148,12 +188,18 @@
               <item name="contracts" type="b2602c69:ProjectViewProjectNode" />
               <item name="contracts" type="462c0819:PsiDirectoryNode" />
               <item name="contracts" type="462c0819:PsiDirectoryNode" />
+              <item name="mocks" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="contracts" type="b2602c69:ProjectViewProjectNode" />
+              <item name="contracts" type="462c0819:PsiDirectoryNode" />
+              <item name="contracts" type="462c0819:PsiDirectoryNode" />
               <item name="utils" type="462c0819:PsiDirectoryNode" />
             </path>
             <path>
               <item name="contracts" type="b2602c69:ProjectViewProjectNode" />
               <item name="contracts" type="462c0819:PsiDirectoryNode" />
-              <item name="migrations" type="462c0819:PsiDirectoryNode" />
+              <item name="test" type="462c0819:PsiDirectoryNode" />
             </path>
           </expand>
           <select />
@@ -167,10 +213,15 @@
     <property name="last_opened_file_path" value="$PROJECT_DIR$" />
     <property name="nodejs_interpreter_path.stuck_in_default_project" value="undefined stuck path" />
     <property name="nodejs_npm_path_reset_for_default_project" value="true" />
-    <property name="settings.editor.selected.configurable" value="configurable.group.appearance" />
+    <property name="settings.editor.selected.configurable" value="preferences.pluginManager" />
+    <property name="ts.external.directory.path" value="$APPLICATION_HOME_DIR$/plugins/JavaScriptLanguage/jsLanguageServicesImpl/external" />
   </component>
   <component name="RecentsManager">
     <key name="MoveFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/contracts" />
+      <recent name="$PROJECT_DIR$/contracts/utils" />
+    </key>
+    <key name="CopyFile.RECENT_KEYS">
       <recent name="$PROJECT_DIR$/contracts/utils" />
     </key>
   </component>
@@ -206,17 +257,41 @@
       <workItem from="1608372473844" duration="13872000" />
       <workItem from="1608504775831" duration="8570000" />
       <workItem from="1608680969084" duration="2587000" />
-      <workItem from="1608761830427" duration="1953000" />
+      <workItem from="1608761830427" duration="8457000" />
+      <workItem from="1608840425333" duration="9304000" />
+      <workItem from="1608915629908" duration="6305000" />
+      <workItem from="1608923817879" duration="173000" />
+      <workItem from="1608924007718" duration="47000" />
+      <workItem from="1608924068744" duration="230000" />
+      <workItem from="1608924313518" duration="61000" />
+      <workItem from="1608924389711" duration="8976000" />
+      <workItem from="1609090685095" duration="2886000" />
+      <workItem from="1609151145029" duration="10419000" />
+      <workItem from="1609286764996" duration="4750000" />
+      <workItem from="1609317479309" duration="13000" />
+      <workItem from="1609367815732" duration="631000" />
+      <workItem from="1609369506405" duration="10224000" />
+      <workItem from="1609536823842" duration="8137000" />
+      <workItem from="1609597455363" duration="18560000" />
+      <workItem from="1609674165699" duration="1105000" />
+      <workItem from="1609704141739" duration="600000" />
+      <workItem from="1609751021456" duration="32000" />
+      <workItem from="1609883182124" duration="13639000" />
+      <workItem from="1610011756322" duration="193000" />
+      <workItem from="1610062111561" duration="50000" />
+      <workItem from="1610062178547" duration="5770000" />
+      <workItem from="1610106445942" duration="9778000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="41280000" />
+    <option name="totallyTimeSpent" value="159667000" />
   </component>
   <component name="ToolWindowManager">
-    <frame x="0" y="23" width="1680" height="1027" extended-state="0" />
+    <frame x="-413" y="-1138" width="1680" height="1039" extended-state="0" />
+    <editor active="true" />
     <layout>
-      <window_info content_ui="combo" id="Project" order="0" visible="true" weight="0.2802198" />
+      <window_info content_ui="combo" id="Project" order="0" visible="true" weight="0.2008547" />
       <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
       <window_info id="Favorites" order="2" side_tool="true" />
       <window_info anchor="bottom" id="Message" order="0" />
@@ -228,8 +303,9 @@
       <window_info anchor="bottom" id="TODO" order="6" />
       <window_info anchor="bottom" id="Docker" order="7" show_stripe_button="false" />
       <window_info anchor="bottom" id="Version Control" order="8" />
-      <window_info active="true" anchor="bottom" id="Terminal" order="9" visible="true" weight="0.32941177" />
+      <window_info active="true" anchor="bottom" id="Terminal" order="9" visible="true" weight="0.44139388" />
       <window_info anchor="bottom" id="Event Log" order="10" side_tool="true" />
+      <window_info anchor="bottom" id="TypeScript" order="11" />
       <window_info anchor="right" id="Commander" internal_type="SLIDING" order="0" type="SLIDING" weight="0.4" />
       <window_info anchor="right" id="Ant Build" order="1" weight="0.25" />
       <window_info anchor="right" content_ui="combo" id="Hierarchy" order="2" weight="0.25" />
@@ -239,68 +315,328 @@
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="1" />
   </component>
+  <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <breakpoints>
+        <line-breakpoint enabled="true" type="javascript">
+          <url>file://$PROJECT_DIR$/test/token.js</url>
+          <line>33</line>
+          <option name="timeStamp" value="3" />
+        </line-breakpoint>
+      </breakpoints>
+    </breakpoint-manager>
+  </component>
   <component name="editorHistoryManager">
-    <entry file="file://$PROJECT_DIR$/.gitignore">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="45">
-          <caret line="3" lean-forward="true" selection-start-line="3" selection-end-line="3" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/README.md">
-      <provider selected="true" editor-type-id="split-provider[text-editor;markdown-preview-editor]">
-        <state split_layout="SPLIT">
-          <first_editor relative-caret-position="30">
-            <caret line="2" lean-forward="true" selection-start-line="2" selection-end-line="2" />
-          </first_editor>
-          <second_editor />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/contracts/utils/Balancesss.sol" />
-    <entry file="file://$PROJECT_DIR$/contracts/utils/Balances.sol" />
     <entry file="file://$PROJECT_DIR$/migrations/1_initial_migration.js">
       <provider selected="true" editor-type-id="text-editor">
-        <state>
-          <caret column="21" selection-start-column="21" selection-end-column="21" />
+        <state relative-caret-position="75">
+          <caret line="5" selection-start-line="5" selection-end-line="5" />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/package-lock.json">
+    <entry file="file://$PROJECT_DIR$/node_modules/openzeppelin-solidity/contracts/token/ERC20/README.adoc">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="45">
+          <caret line="3" column="95" lean-forward="true" selection-start-line="3" selection-start-column="40" selection-end-line="3" selection-end-column="95" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/node_modules/openzeppelin-solidity/contracts/token/ERC20/ERC20Snapshot.sol">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="125">
+          <caret line="38" column="31" lean-forward="true" selection-start-line="38" selection-start-column="31" selection-end-line="38" selection-end-column="31" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/node_modules/openzeppelin-solidity/contracts/token/ERC20/SafeERC20.sol">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="332">
+          <caret line="63" column="75" selection-start-line="63" selection-start-column="75" selection-end-line="63" selection-end-column="75" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$APPLICATION_HOME_DIR$/plugins/JavaScriptLanguage/jsLanguageServicesImpl/external/lib.esnext.bigint.d.ts">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="212">
+          <caret line="42" column="30" selection-start-line="42" selection-start-column="30" selection-end-line="42" selection-end-column="30" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$APPLICATION_HOME_DIR$/plugins/JavaScriptLanguage/jsLanguageServicesImpl/external/lib.es5.d.ts">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="16">
+          <caret line="562" column="4" selection-start-line="562" selection-start-column="4" selection-end-line="562" selection-end-column="4" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/migrations/2_deploy_contracts.js">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="120">
+          <caret line="8" lean-forward="true" selection-start-line="8" selection-end-line="8" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/node_modules/truffle/build/cli.bundled.js">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="345">
+          <caret line="10270" column="17" lean-forward="true" selection-start-line="10270" selection-start-column="17" selection-end-line="10270" selection-end-column="17" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/contracts/utils/Map.sol" />
+    <entry file="file://$PROJECT_DIR$/contracts/utils/EnumerableMap.sol" />
+    <entry file="file://$PROJECT_DIR$/contracts/utils/2.sol" />
+    <entry file="file://$PROJECT_DIR$/contracts/utils/EnumerableList.sol" />
+    <entry file="file://$PROJECT_DIR$/node_modules/chai-bignumber/chai-bignumber.js" />
+    <entry file="file://$PROJECT_DIR$/node_modules/bignumber.js/bignumber.d.ts">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="340">
+          <caret line="1049" column="14" selection-start-line="1049" selection-start-column="2" selection-end-line="1049" selection-end-column="14" />
+          <folding>
+            <element signature="n#!!doc" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/build/contracts/Token.json">
       <provider selected="true" editor-type-id="text-editor" />
     </entry>
-    <entry file="file://$PROJECT_DIR$/contracts/utils/EnumerableFifo.sol">
+    <entry file="file://$PROJECT_DIR$/node_modules/@types/node/globals.d.ts">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="572">
-          <caret line="126" column="5" selection-start-line="126" selection-start-column="5" selection-end-line="126" selection-end-column="5" />
+        <state relative-caret-position="193">
+          <caret line="872" column="8" selection-start-line="872" selection-start-column="8" selection-end-line="872" selection-end-column="8" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/contracts/MyToken.sol" />
+    <entry file="file://$PROJECT_DIR$/node_modules/openzeppelin-solidity/contracts/token/ERC20/ERC20Burnable.sol">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="197">
+          <caret line="21" column="10" lean-forward="true" selection-start-line="21" selection-start-column="10" selection-end-line="21" selection-end-column="10" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/node_modules/openzeppelin-solidity/contracts/token/ERC20/ERC20Capped.sol">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="512">
+          <caret line="45" lean-forward="true" selection-start-line="45" selection-end-line="45" />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/truffle-config.js">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="405">
-          <caret line="27" column="63" selection-start-line="27" selection-start-column="63" selection-end-line="27" selection-end-column="63" />
+        <state relative-caret-position="180">
+          <caret line="12" column="49" lean-forward="true" selection-start-line="12" selection-start-column="49" selection-end-line="12" selection-end-column="49" />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/package.json">
+    <entry file="file://$PROJECT_DIR$/build/contracts/MyToken.json" />
+    <entry file="file://$PROJECT_DIR$/node_modules/openzeppelin-solidity/contracts/token/ERC20/ERC20.sol">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="445">
-          <caret line="34" column="23" selection-start-line="34" selection-start-column="23" selection-end-line="34" selection-end-column="23" />
+        <state relative-caret-position="646">
+          <caret line="54" column="28" selection-start-line="54" selection-start-column="28" selection-end-line="54" selection-end-column="28" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/node_modules/openzeppelin-solidity/contracts/token/ERC20/ERC20Pausable.sol">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="420">
+          <caret line="28" lean-forward="true" selection-start-line="28" selection-end-line="28" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/node_modules/chai/register-expect.js">
+      <provider selected="true" editor-type-id="text-editor" />
+    </entry>
+    <entry file="file://$PROJECT_DIR$/node_modules/mocha/lib/cli/run.js">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="273">
+          <caret line="45" selection-start-line="45" selection-end-line="45" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/node_modules/@openzeppelin/test-helpers/src/expectRevert.js">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="273">
+          <caret line="24" column="9" selection-start-line="24" selection-start-column="9" selection-end-line="24" selection-end-column="9" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/node_modules/@openzeppelin/test-helpers/src/expectEvent.js">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="273">
+          <caret line="30" column="10" selection-start-line="30" selection-start-column="10" selection-end-line="30" selection-end-column="10" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/node_modules/@openzeppelin/test-helpers/index.js">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="75">
+          <caret line="5" column="6" selection-start-line="5" selection-start-column="6" selection-end-line="5" selection-end-column="6" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/node_modules/bn.js/lib/bn.js">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="266">
+          <caret line="2424" column="16" selection-start-line="2424" selection-start-column="16" selection-end-line="2424" selection-end-column="16" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/node_modules/chai/lib/chai.js">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="543">
+          <caret line="81" column="3" lean-forward="true" selection-start-line="81" selection-start-column="3" selection-end-line="81" selection-end-column="3" />
+          <folding>
+            <element signature="n#!!doc" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/node_modules/chai/index.js">
+      <provider selected="true" editor-type-id="text-editor">
+        <state>
+          <caret column="32" lean-forward="true" selection-start-column="32" selection-end-column="32" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/contracts/utils/SafeMathInt.sol">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="165">
+          <caret line="11" column="45" selection-start-line="11" selection-start-column="45" selection-end-line="11" selection-end-column="45" />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/node_modules/openzeppelin-solidity/contracts/GSN/Context.sol">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="210">
-          <caret line="14" column="20" selection-start-line="14" selection-start-column="20" selection-end-line="14" selection-end-column="20" />
+        <state relative-caret-position="321">
+          <caret line="14" column="18" selection-start-line="14" selection-start-column="18" selection-end-line="14" selection-end-column="18" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/node_modules/openzeppelin-solidity/contracts/utils/Pausable.sol">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="1095">
+          <caret line="73" column="54" lean-forward="true" selection-start-line="73" selection-start-column="54" selection-end-line="73" selection-end-column="54" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/node_modules/openzeppelin-solidity/contracts/token/ERC20/IERC20.sol">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="105">
+          <caret line="7" column="10" selection-start-line="7" selection-start-column="10" selection-end-line="7" selection-end-column="10" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/contracts/utils/UInt256Lib.sol">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="90">
+          <caret line="6" column="8" selection-start-line="6" selection-start-column="8" selection-end-line="6" selection-end-column="8" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/node_modules/openzeppelin-solidity/contracts/utils/EnumerableSet.sol">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-1151">
+          <caret line="188" column="17" selection-start-line="188" selection-start-column="7" selection-end-line="188" selection-end-column="17" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/node_modules/openzeppelin-solidity/contracts/math/SafeMath.sol">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="200">
+          <caret line="102" column="13" selection-start-line="102" selection-start-column="13" selection-end-line="102" selection-end-column="13" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/test/simulation/supply_precision.js">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="115">
+          <caret line="34" column="3" selection-start-line="34" selection-start-column="3" selection-end-line="34" selection-end-column="3" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/contracts/Migrations.sol">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="15">
+          <caret line="1" selection-start-line="1" selection-end-line="1" selection-end-column="32" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/package.json">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="90">
+          <caret line="6" column="18" selection-start-line="6" selection-start-column="13" selection-end-line="6" selection-end-column="18" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/node_modules/@types/bn.js/index.d.ts">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="2601">
+          <caret line="331" column="4" selection-start-line="331" selection-start-column="4" selection-end-line="331" selection-end-column="4" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/node_modules/openzeppelin-solidity/contracts/access/Ownable.sol">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="512">
+          <caret line="68" lean-forward="true" selection-start-line="68" selection-end-line="68" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/contracts/TokenBackup.sol">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="72">
+          <caret line="14" column="15" selection-start-line="14" selection-start-column="15" selection-end-line="14" selection-end-column="15" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/contracts/mocks/TokenMock.sol">
+      <provider selected="true" editor-type-id="text-editor">
+        <state>
+          <caret selection-end-column="31" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/contracts/utils/Rebaseable.sol">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="212">
+          <caret line="36" column="31" selection-start-line="36" selection-start-column="31" selection-end-line="36" selection-end-column="31" />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/contracts/Token.sol">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="210">
-          <caret line="14" column="22" lean-forward="true" selection-start-line="14" selection-start-column="22" selection-end-line="14" selection-end-column="22" />
+        <state relative-caret-position="-2">
+          <caret line="49" column="16" selection-start-line="49" selection-start-column="16" selection-end-line="49" selection-end-column="16" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/test/token.js">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="349">
+          <caret line="227" selection-start-line="227" selection-end-line="227" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/contracts/utils/EnumerableFifo.sol">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-289">
+          <caret line="178" selection-start-line="171" selection-end-line="178" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/test/enumerableFifo.js">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="305">
+          <caret line="34" column="54" lean-forward="true" selection-start-line="34" selection-start-column="54" selection-end-line="34" selection-end-column="54" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/contracts/mocks/EnumerableFifoTest.sol">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="144">
+          <caret line="14" column="40" selection-start-line="14" selection-start-column="40" selection-end-line="14" selection-end-column="40" />
         </state>
       </provider>
     </entry>

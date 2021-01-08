@@ -56,7 +56,6 @@ contract Token is Context, IERC20, Ownable, Pausable, Rebaseable {
         _totalSupply = _initialTotalSupply;
         _reflectionTotal = _calcMaxReflection(_totalSupply);
 
-        uint256 _initialReflectionSupply = (MAX - (MAX % _initialTotalSupply));
         _netShareOwned[_msgSender()].add(_epoch, _reflectionTotal);
         _included.add(_msgSender());
         emit Transfer(address(0), _msgSender(), _initialTotalSupply);
@@ -143,7 +142,6 @@ contract Token is Context, IERC20, Ownable, Pausable, Rebaseable {
     }
 
     function tokenFromReflection(uint256 reflectionAmount) public view returns(uint256) {
-        require(reflectionAmount <= MAX, "Amount must be less than MAX reflection");
         uint256 currentRate =  _getRate();
         return reflectionAmount.div(currentRate);
     }

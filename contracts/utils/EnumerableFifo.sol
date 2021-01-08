@@ -250,7 +250,7 @@ library EnumerableFifo {
                 rebaseFactor = maxFactor.sub(decreaseValue, "Max user adjusted rebase factor cannot be lower than 0");
             }
 
-            _updateValueAtKey(map._inner, currentKey, _adjustValue(map, currentValue, rebaseFactor, valuesArray));
+            _updateValueAtKey(map._inner, currentKey, _adjustValue(currentValue, rebaseFactor, valuesArray));
 
             (currentKey, nextKey, currentValue) = _get(map._inner, nextKey);
         }
@@ -266,8 +266,8 @@ library EnumerableFifo {
     * @param maxFactor Maximum incentive possible for epoch <= minAllowedKey. It is 10**DECIMALS based value.
     * @param valuesArray 4 uint256 values (preRebaseRate, postRebaseRate, currentNetMultiplier, UNIT).
     */
-    function _adjustValue(U32ToU256Queue storage map, uint256 value, uint256 userIncentiveFactor,
-        uint256[4] memory valuesArray) view internal returns (uint256) {
+    function _adjustValue(uint256 value, uint256 userIncentiveFactor,uint256[4] memory valuesArray)
+        view internal returns (uint256) {
 
         uint256 currentNetMultiplier = valuesArray[2];
         uint256 valuesBase = valuesArray[3];
