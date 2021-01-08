@@ -20,6 +20,10 @@ contract TokenMock is Token {
         return _maxIncentive;
     }
 
+    function _getReflectionTotalMock() public view returns (uint256) {
+        return _reflectionTotal;
+    }
+
     function _setEpochMock(uint32 newEpoch) public {
         _epoch = newEpoch;
     }

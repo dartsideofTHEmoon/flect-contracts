@@ -14,8 +14,8 @@ require('chai')
 const DECIMALS = 9;
 const INTIAL_SUPPLY = toUnitsDenomination(5 * 10 ** 6);
 const UNIT = toUnitsDenomination(1);
-const MAX_UINT256 = new BN(2).pow(new BN(255));
-const INITIAL_REFLECTION = MAX_UINT256.sub(MAX_UINT256.umod(INTIAL_SUPPLY));
+const MAX_UINT224 = new BN(2).pow(new BN(223));
+const INITIAL_REFLECTION = MAX_UINT224.sub(MAX_UINT224.umod(INTIAL_SUPPLY));
 const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
 
 function toUnitsDenomination (x) {
@@ -201,5 +201,27 @@ describe('Rebase parameters', async () => {
         currentNetMultiplier.should.bignumber.eq(new BN(1043902439));
         maxFactor.should.bignumber.eq(UNIT.add(new BN(decreasePerEpoch * maxHistoryLen)));
         maxFactor.should.bignumber.eq(maxIncetive);
+    });
+
+    it('Test simple positive rebase', async() => {
+        const exchangePrice = toUnitsDenomination(12);
+        const targetPrice = toUnitsDenomination(11);
+
+        await this.instance.setMonetaryPolicy(this.deployer, {from: this.deployer});
+        await this.instance.rebase(exchangePrice, targetPrice, 5, {from: this.deployer});
+
+        // (await this.instance.totalSupply()).should.bignumber.eq(new BN(5090909090000000));
+        (await this.instance.balanceOf(this.deployer)).should.bignumber.eq(new BN(5090909090000000));
+    });
+
+    it('Test simple negative rebase', async() => {
+        const exchangePrice = toUnitsDenomination(20);
+        const targetPrice = toUnitsDenomination(21);
+
+        await this.instance.setMonetaryPolicy(this.deployer, {from: this.deployer});
+        await this.instance.rebase(exchangePrice, targetPrice, 2, {from: this.deployer});
+
+        // (await this.instance.totalSupply()).should.bignumber.eq(new BN(5090909090000000));
+        (await this.instance.balanceOf(this.deployer)).should.bignumber.eq(new BN(4880952385000000));
     });
 });

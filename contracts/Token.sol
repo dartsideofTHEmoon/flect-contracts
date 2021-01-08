@@ -31,10 +31,10 @@ contract Token is Context, IERC20, Ownable, Pausable, Rebaseable {
     uint8 constant private _decimals = 9;
 
     // II. Variables responsible for counting balances and network shares
-    uint256 private constant MAX = ~uint256(0);
+    uint256 private constant MAX = ~uint256(0) / (2 << 32); // Leave some space for UNIT to grow during rebases and funds migrations.
     uint256 private constant UNIT = 10**_decimals;
     uint256 private _totalSupply;
-    uint256 private _reflectionTotal;
+    uint256 internal _reflectionTotal;
     // Fees since beginning of an epoch.
     uint256 private _transactionFeeEpoch = 0;
 
@@ -143,7 +143,7 @@ contract Token is Context, IERC20, Ownable, Pausable, Rebaseable {
     }
 
     function tokenFromReflection(uint256 reflectionAmount) public view returns(uint256) {
-        require(reflectionAmount <= _reflectionTotal, "Amount must be less than total reflections");
+        require(reflectionAmount <= MAX, "Amount must be less than MAX reflection");
         uint256 currentRate =  _getRate();
         return reflectionAmount.div(currentRate);
     }
@@ -151,7 +151,7 @@ contract Token is Context, IERC20, Ownable, Pausable, Rebaseable {
 
 
     // ----- Public rebase state modifiers -----
-    function setMonetaryPolicy(address monetaryPolicy_) internal onlyOwner {
+    function setMonetaryPolicy(address monetaryPolicy_) external onlyOwner {
         _setMonetaryPolicy(monetaryPolicy_);
     }
 
@@ -231,7 +231,6 @@ contract Token is Context, IERC20, Ownable, Pausable, Rebaseable {
     // ----- End of administrator part -----
 
     function _calcMaxReflection(uint256 totalSupply_) private view returns (uint256){
-        // TODO we have to change it to lower value, so positive rebases are possible.
         return MAX - (MAX % totalSupply_);
     }
 
@@ -377,7 +376,7 @@ contract Token is Context, IERC20, Ownable, Pausable, Rebaseable {
         int256 rebaseDelta = UNIT.toInt256Safe().mul(exchangeRate.toInt256Safe().sub(targetRateSigned)).div(targetRateSigned);
         // Apply the Dampening factor and construct multiplier.
 
-        require(rebaseLag > 0); //TODO this actually can be lower, but need to be implemented. When this factor is lower threat it as leverage.
+        require(rebaseLag > 0); //TODO this actually can be lower, but need to be implemented. When this factor is lower treat it as leverage.
         uint256 currentNetMultiplier = uint256(UNIT.toInt256Safe().add(rebaseDelta.div(rebaseLag)));
 
         // 3. maxFactor

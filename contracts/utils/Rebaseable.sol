@@ -19,7 +19,7 @@ abstract contract Rebaseable {
      * @dev Modifier limits rebase functions access to monetary policy contract.
      */
     modifier onlyMonetaryPolicy() {
-        require(msg.sender == _monetaryPolicy);
+        require(msg.sender == _monetaryPolicy, "Rebaseable: caller is not the monetary policy");
         _;
     }
 
