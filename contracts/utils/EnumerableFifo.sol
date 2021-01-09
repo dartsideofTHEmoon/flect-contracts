@@ -256,7 +256,7 @@ library EnumerableFifo {
         }
 
         int256 newSum = map._inner._sum.toInt256Safe();
-        return originalSum.sub(newSum);
+        return newSum.sub(originalSum).div(valuesArray[0].toInt256Safe());
     }
 
     /*

@@ -210,7 +210,7 @@ describe('Rebase parameters', async () => {
         await this.instance.setMonetaryPolicy(this.deployer, {from: this.deployer});
         await this.instance.rebase(exchangePrice, targetPrice, 5, {from: this.deployer});
 
-        // (await this.instance.totalSupply()).should.bignumber.eq(new BN(5090909090000000));
+        (await this.instance.totalSupply()).should.bignumber.eq(new BN(5090909090000000));
         (await this.instance.balanceOf(this.deployer)).should.bignumber.eq(new BN(5090909090000000));
     });
 
@@ -221,7 +221,7 @@ describe('Rebase parameters', async () => {
         await this.instance.setMonetaryPolicy(this.deployer, {from: this.deployer});
         await this.instance.rebase(exchangePrice, targetPrice, 2, {from: this.deployer});
 
-        // (await this.instance.totalSupply()).should.bignumber.eq(new BN(5090909090000000));
+        (await this.instance.totalSupply()).should.bignumber.eq(new BN(4880952385000000));
         (await this.instance.balanceOf(this.deployer)).should.bignumber.eq(new BN(4880952385000000));
     });
 });

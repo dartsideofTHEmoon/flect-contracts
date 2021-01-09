@@ -31,10 +31,12 @@ contract Token is Context, IERC20, Ownable, Pausable, Rebaseable {
     uint8 constant private _decimals = 9;
 
     // II. Variables responsible for counting balances and network shares
-    uint256 private constant MAX = ~uint256(0) / (2 << 32); // Leave some space for UNIT to grow during rebases and funds migrations.
+    uint256 private constant MAX = ~uint256(0) / (1 << 32); // Leave some space for UNIT to grow during rebases and funds migrations.
     uint256 private constant UNIT = 10**_decimals;
-    uint256 private _totalSupply;
-    uint256 internal _reflectionTotal;
+    uint256 private constant _initialTotalSupply = 5 * 10**6 * UNIT;
+    uint256 private _totalSupply = _initialTotalSupply;
+    uint256 internal _reflectionTotal = MAX - (MAX % _totalSupply);
+    uint256 internal constant _reflectionPerToken = (MAX - (MAX % _initialTotalSupply)) / _initialTotalSupply;
     // Fees since beginning of an epoch.
     uint256 private _transactionFeeEpoch = 0;
 
@@ -51,11 +53,6 @@ contract Token is Context, IERC20, Ownable, Pausable, Rebaseable {
     mapping (address => bool) private _banned;
 
     constructor () public {
-        uint256 _initialTotalSupply = 5 * 10**6 * UNIT;
-
-        _totalSupply = _initialTotalSupply;
-        _reflectionTotal = _calcMaxReflection(_totalSupply);
-
         _netShareOwned[_msgSender()].add(_epoch, _reflectionTotal);
         _included.add(_msgSender());
         emit Transfer(address(0), _msgSender(), _initialTotalSupply);
@@ -170,13 +167,13 @@ contract Token is Context, IERC20, Ownable, Pausable, Rebaseable {
         int256 supplyChange = 0;
         for (uint256 i = 0; i < _included.length(); i++) {
             int256 userSupplyChange = _netShareOwned[_included.at(i)].rebaseUserFunds(maxIncentiveEpoch, _decreasePerEpoch, maxFactor, valuesArray);
-            supplyChange.add(userSupplyChange);
+            supplyChange = supplyChange.add(userSupplyChange);
         }
 
         if (supplyChange >= 0) {
-            _totalSupply.add(uint256(supplyChange));
+            _totalSupply = _totalSupply.add(uint256(supplyChange));
         } else {
-            _totalSupply.sub(uint256(-supplyChange));
+            _totalSupply = _totalSupply.sub(uint256(-supplyChange));
         }
 
         _finalizeRebase();
@@ -229,7 +226,7 @@ contract Token is Context, IERC20, Ownable, Pausable, Rebaseable {
     // ----- End of administrator part -----
 
     function _calcMaxReflection(uint256 totalSupply_) private view returns (uint256){
-        return MAX - (MAX % totalSupply_);
+        return totalSupply_ * _reflectionPerToken;
     }
 
     function _approve(address owner, address spender, uint256 amount) private {
