@@ -8,15 +8,15 @@ contract TokenMock is Token {
         return Token._getRebaseFactors(exchangeRate, targetRate, rebaseLag);
     }
 
-    function _getDecreasePerEpochMock() public view returns (uint256) {
+    function _getDecreasePerEpochMock() public pure returns (uint256) {
         return _decreasePerEpoch;
     }
 
-    function _getMaxHistoryLenMock() public view returns (uint32) {
+    function _getMaxHistoryLenMock() public pure returns (uint32) {
         return _maxHistoryLen;
     }
 
-    function _getMaxIncentiveMock() public view returns (uint256) {
+    function _getMaxIncentiveMock() public pure returns (uint256) {
         return _maxIncentive;
     }
 

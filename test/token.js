@@ -4,6 +4,7 @@ const { expectEvent, expectRevert } = require('@openzeppelin/test-helpers');
 const { expect } = require('chai');
 
 const Token = contract.fromArtifact("TokenMock");
+const EnumerableFifo = contract.fromArtifact("EnumerableFifo");
 
 require('chai').should();
 require('chai')
@@ -24,6 +25,10 @@ function toUnitsDenomination (x) {
 
 async function BeforeEach() {
     const [deployer, receiver] = accounts;
+
+    const library = await EnumerableFifo.new();
+    await Token.detectNetwork();
+    await Token.link('EnumerableFifo', library.address);
     const instance = await Token.new({from: deployer});
 
     return [instance, deployer, receiver];
@@ -153,6 +158,15 @@ describe('Transactions', function () {
         deployerFunds.should.bignumber.eq(new BN(2502502502502502));
 
         receiverFunds.add(deployerFunds).should.bignumber.eq(INTIAL_SUPPLY.sub(new BN(1)));
+    });
+
+    it('wipe small amounts', async() => {
+        const lessThanUnit = new BN(100000);
+        expect(UNIT.gt(lessThanUnit));
+        await this.instance.transfer(this.receiver, INTIAL_SUPPLY.sub(new BN(100000)), {from: this.deployer});
+        (await this.instance.balanceOf(this.deployer)).should.bignumber.eq(new BN(0));
+        (await this.instance.balanceOf(this.receiver)).should.bignumber.eq(new BN(5000000000000000));
+
     });
 });
 

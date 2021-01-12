@@ -146,7 +146,7 @@ library EnumerableFifo {
     /**
      * @dev Gets sum of account balance.
      */
-    function getSum(U32ToU256Queue storage map) internal view returns (uint256) {
+    function getSum(U32ToU256Queue storage map) public view returns (uint256) {
         return map._inner._sum;
     }
 
@@ -157,7 +157,7 @@ library EnumerableFifo {
      *
      * - Addition cannot overflow.
      */
-    function add(U32ToU256Queue storage map, uint32 key, uint256 value) internal {
+    function add(U32ToU256Queue storage map, uint32 key, uint256 value) public {
         require(key > 0);
         require(value > 0);
 
@@ -176,7 +176,7 @@ library EnumerableFifo {
      *
      * - Subtraction cannot overflow, result must be positive.
      */
-    function sub(U32ToU256Queue storage map, uint256 value) internal {
+    function sub(U32ToU256Queue storage map, uint256 value) public {
         require(value > 0);
         require(value <= map._inner._sum);
 
@@ -203,7 +203,7 @@ library EnumerableFifo {
      *
      * - Subtraction cannot overflow, result must be positive.
      */
-    function flatten(U32ToU256Queue storage map, uint32 minAllowedKey) internal {
+    function flatten(U32ToU256Queue storage map, uint32 minAllowedKey) public {
         uint256 cumulativeValue = 0;
         (uint32 currentKey, uint32 nextKey, uint256 currentValue) = _getFirst(map._inner);
         while (currentKey != 0) {
@@ -237,7 +237,7 @@ library EnumerableFifo {
         Array is used to avoid EVM limit for 16 local variables.
     */
     function rebaseUserFunds(U32ToU256Queue storage map, uint32 maxIncentiveEpoch, uint256 factorDecreasePerEpoch,
-        uint256 maxFactor, uint256[4] memory valuesArray) internal returns (int256) {
+        uint256 maxFactor, uint256[4] memory valuesArray) public returns (int256) {
 
         int256 originalSum = map._inner._sum.toInt256Safe();
 
@@ -267,7 +267,7 @@ library EnumerableFifo {
     * @param valuesArray 4 uint256 values (preRebaseRate, postRebaseRate, currentNetMultiplier, UNIT).
     */
     function _adjustValue(uint256 value, uint256 userIncentiveFactor,uint256[4] memory valuesArray)
-        view internal returns (uint256) {
+        pure public returns (uint256) {
 
         uint256 currentNetMultiplier = valuesArray[2];
         uint256 valuesBase = valuesArray[3];

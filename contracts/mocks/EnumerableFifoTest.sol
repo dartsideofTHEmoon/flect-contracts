@@ -7,7 +7,6 @@ contract EnumerableFifoTest {
     uint32 public epoch = 1;
     EnumerableFifo.U32ToU256Queue internal userBalance;
 
-
     function getSum() public view returns (uint256) {
         return userBalance.getSum();
     }
@@ -15,7 +14,6 @@ contract EnumerableFifoTest {
     function add(uint256 value) public {
         userBalance.add(epoch, value);
     }
-
 
     function sub(uint256 value) public {
         userBalance.sub(value);

@@ -170,6 +170,13 @@ contract Token is Context, IERC20, Ownable, Pausable, Rebaseable {
             supplyChange = supplyChange.add(userSupplyChange);
         }
 
+        for (uint256 i = 0; i < _excluded.length(); i++) {
+            uint256 owned = _tokenOwned[_excluded.at(i)];
+            int256 newValueSign = owned.mul(currentNetMultiplier).div(UNIT).toInt256Safe();
+
+            supplyChange = supplyChange.add(newValueSign.sub(owned.toInt256Safe()));
+        }
+
         if (supplyChange >= 0) {
             _totalSupply = _totalSupply.add(uint256(supplyChange));
         } else {
@@ -225,7 +232,7 @@ contract Token is Context, IERC20, Ownable, Pausable, Rebaseable {
     }
     // ----- End of administrator part -----
 
-    function _calcMaxReflection(uint256 totalSupply_) private view returns (uint256){
+    function _calcMaxReflection(uint256 totalSupply_) private pure returns (uint256){
         return totalSupply_ * _reflectionPerToken;
     }
 
@@ -256,6 +263,7 @@ contract Token is Context, IERC20, Ownable, Pausable, Rebaseable {
 
             if (_tokenOwned[sender] == 0) {
                 _excluded.remove(sender);
+                delete _tokenOwned[sender];
             }
         } else {
             if (recipientExcluded) {
@@ -275,16 +283,24 @@ contract Token is Context, IERC20, Ownable, Pausable, Rebaseable {
     }
 
     function _transferStandard(address sender, address recipient, uint256 tAmount) private {
-        (uint256 rAmount, uint256 rTransferAmount, uint256 rFee, uint256 tTransferAmount, uint256 tFee) = _getValues(tAmount);
-        _netShareOwned[sender].sub(rAmount);
+        (uint256 rAmount, uint256 rTransferAmount, uint256 rFee, uint256 tTransferAmount, uint256 tFee, bool wipeSenderAmount) = _getValues(tAmount, sender);
+        if (wipeSenderAmount) {
+            _netShareOwned[sender].sub(_netShareOwned[sender].getSum());
+        } else {
+            _netShareOwned[sender].sub(rAmount);
+        }
         _netShareOwned[recipient].add(_epoch, rTransferAmount);
         _reflectFee(rFee, tFee);
         emit Transfer(sender, recipient, tTransferAmount);
     }
 
     function _transferToExcluded(address sender, address recipient, uint256 tAmount) private {
-        (uint256 rAmount, uint256 rTransferAmount, uint256 rFee, uint256 tTransferAmount, uint256 tFee) = _getValues(tAmount);
-        _netShareOwned[sender].sub(rAmount);
+        (uint256 rAmount, uint256 rTransferAmount, uint256 rFee, uint256 tTransferAmount, uint256 tFee, bool wipeSenderAmount) = _getValues(tAmount, sender);
+        if (wipeSenderAmount) {
+            _netShareOwned[sender].sub(_netShareOwned[sender].getSum());
+        } else {
+            _netShareOwned[sender].sub(rAmount);
+        }
         _tokenOwned[recipient] = _tokenOwned[recipient].add(tTransferAmount);
         _netShareOwned[recipient].add(_epoch, rTransferAmount);
         _reflectFee(rFee, tFee);
@@ -292,7 +308,7 @@ contract Token is Context, IERC20, Ownable, Pausable, Rebaseable {
     }
 
     function _transferFromExcluded(address sender, address recipient, uint256 tAmount) private {
-        (uint256 rAmount, uint256 rTransferAmount, uint256 rFee, uint256 tTransferAmount, uint256 tFee) = _getValues(tAmount);
+        (uint256 rAmount, uint256 rTransferAmount, uint256 rFee, uint256 tTransferAmount, uint256 tFee,) = _getValues(tAmount, sender);
         _tokenOwned[sender] = _tokenOwned[sender].sub(tAmount);
         _netShareOwned[sender].sub(rAmount);
         _netShareOwned[recipient].add(_epoch, rTransferAmount);
@@ -301,7 +317,7 @@ contract Token is Context, IERC20, Ownable, Pausable, Rebaseable {
     }
 
     function _transferBothExcluded(address sender, address recipient, uint256 tAmount) private {
-        (uint256 rAmount, uint256 rTransferAmount, uint256 rFee, uint256 tTransferAmount, uint256 tFee) = _getValues(tAmount);
+        (uint256 rAmount, uint256 rTransferAmount, uint256 rFee, uint256 tTransferAmount, uint256 tFee,) = _getValues(tAmount, sender);
         _tokenOwned[sender] = _tokenOwned[sender].sub(tAmount);
         _netShareOwned[sender].sub(rAmount);
         _tokenOwned[recipient] = _tokenOwned[recipient].add(tTransferAmount);
@@ -315,11 +331,20 @@ contract Token is Context, IERC20, Ownable, Pausable, Rebaseable {
         _transactionFeeEpoch = _transactionFeeEpoch.add(tFee);
     }
 
-    function _getValues(uint256 tAmount) private view returns (uint256, uint256, uint256, uint256, uint256) {
+    function _getValues(uint256 tAmount, address sender) private returns (uint256, uint256, uint256, uint256, uint256, bool) {
         (uint256 tTransferAmount, uint256 tFee) = _getValuesInToken(tAmount);
         uint256 currentRate =  _getRate();
-        (uint256 rAmount, uint256 rTransferAmount, uint256 rFee) = _getRValues(tAmount, tFee, currentRate);
-        return (rAmount, rTransferAmount, rFee, tTransferAmount, tFee);
+
+        uint256 additionalFee = 0;
+        if (_included.contains(sender)) {
+            uint256 tokenRef = _netShareOwned[sender].getSum();
+            uint256 tokenFunds = tokenRef.div(currentRate).sub(tAmount);
+            if (tokenFunds < UNIT) {
+                additionalFee = tokenFunds;
+            }
+        }
+        (uint256 rAmount, uint256 rTransferAmount, uint256 rFee) = _getRValues(tAmount, tFee, additionalFee, currentRate);
+        return (rAmount, rTransferAmount, rFee, tTransferAmount, tFee, additionalFee != 0);
     }
 
     function _getValuesInToken(uint256 tAmount) private pure returns (uint256, uint256) {
@@ -328,11 +353,11 @@ contract Token is Context, IERC20, Ownable, Pausable, Rebaseable {
         return (tTransferAmount, tFee);
     }
 
-    function _getRValues(uint256 tAmount, uint256 tFee, uint256 currentRate) private pure returns (uint256, uint256, uint256) {
+    function _getRValues(uint256 tAmount, uint256 tFee, uint256 tFeeAdditional, uint256 currentRate) private pure returns (uint256, uint256, uint256) {
         uint256 rAmount = tAmount.mul(currentRate);
         uint256 rFee = tFee.mul(currentRate);
         uint256 rTransferAmount = rAmount.sub(rFee);
-        return (rAmount, rTransferAmount, rFee);
+        return (rAmount, rTransferAmount, rFee.add(tFeeAdditional.mul(currentRate)));
     }
 
     function _getRate() private view returns(uint256) {
