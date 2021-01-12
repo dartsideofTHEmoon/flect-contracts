@@ -1,7 +1,7 @@
 const BN = require("bn.js");
-const { accounts, contract } = require('@openzeppelin/test-environment');
-const { expectEvent, expectRevert } = require('@openzeppelin/test-helpers');
-const { expect } = require('chai');
+const {accounts, contract} = require('@openzeppelin/test-environment');
+const {expectEvent, expectRevert} = require('@openzeppelin/test-helpers');
+const {expect} = require('chai');
 
 const Token = contract.fromArtifact("TokenMock");
 const EnumerableFifo = contract.fromArtifact("EnumerableFifo");
@@ -19,7 +19,7 @@ const MAX_UINT224 = new BN(2).pow(new BN(223));
 const INITIAL_REFLECTION = MAX_UINT224.sub(MAX_UINT224.umod(INTIAL_SUPPLY));
 const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
 
-function toUnitsDenomination (x) {
+function toUnitsDenomination(x) {
     return new BN(x).mul(new BN(10 ** DECIMALS));
 }
 
@@ -160,7 +160,7 @@ describe('Transactions', function () {
         receiverFunds.add(deployerFunds).should.bignumber.eq(INTIAL_SUPPLY.sub(new BN(1)));
     });
 
-    it('wipe small amounts', async() => {
+    it('wipe small amounts', async () => {
         const lessThanUnit = new BN(100000);
         expect(UNIT.gt(lessThanUnit));
         await this.instance.transfer(this.receiver, INTIAL_SUPPLY.sub(new BN(100000)), {from: this.deployer});
@@ -170,12 +170,56 @@ describe('Transactions', function () {
     });
 });
 
+describe('Transaction chains', async () => {
+    beforeEach(async () => {
+        [this.instance, this.deployer, this.receiver] = await BeforeEach();
+    });
+
+    it('Split balance into 5 accounts', async () => {
+        const oneFifth = INTIAL_SUPPLY.div(new BN(5));
+        oneFifth.should.bignumber.equal(new BN(1000000000000000));
+        await this.instance.transfer(this.receiver, oneFifth, {from: this.deployer});
+        await this.instance.transfer(accounts[2], oneFifth, {from: this.deployer});
+        await this.instance.transfer(accounts[3], oneFifth, {from: this.deployer});
+        await this.instance.transfer(accounts[4], oneFifth, {from: this.deployer});
+        await this.instance.transfer(accounts[5], oneFifth, {from: this.deployer});
+
+        (await this.instance.balanceOf(this.receiver)).should.bignumber.eq(new BN(999998397437309));
+        (await this.instance.balanceOf(accounts[2])).should.bignumber.eq(new BN(999598398078334));
+        (await this.instance.balanceOf(accounts[3])).should.bignumber.eq(new BN(999198558719103));
+        (await this.instance.balanceOf(accounts[4])).should.bignumber.eq(new BN(998798879295615));
+        (await this.instance.balanceOf(accounts[5])).should.bignumber.eq(new BN(998399359743897));
+    });
+
+    it('Transfer (Exclude to Normal)', async () => {
+        await this.instance.excludeAccount(this.deployer, {from: this.deployer});
+        await this.instance.transfer(this.receiver, 1000000000000000, {from: this.deployer});
+        (await this.instance.balanceOf(this.deployer)).should.bignumber.eq(new BN(4000000000000000));
+        (await this.instance.balanceOf(this.receiver)).should.bignumber.eq(new BN(1000000000000000));
+    });
+
+    it('Transfer (Normal to Excluded)', async () => {
+        await this.instance.excludeAccount(this.receiver, {from: this.deployer});
+        await this.instance.transfer(this.receiver, 1000000000000000, {from: this.deployer});
+        (await this.instance.balanceOf(this.deployer)).should.bignumber.eq(new BN(4002000000000000));
+        (await this.instance.balanceOf(this.receiver)).should.bignumber.eq(new BN(998000000000000));
+    });
+
+    it('Transfer (Excluded to Excluded)', async () => {
+        await this.instance.excludeAccount(this.receiver, {from: this.deployer});
+        await this.instance.excludeAccount(this.deployer, {from: this.deployer});
+        await this.instance.transfer(this.receiver, 1000000000000000, {from: this.deployer});
+        (await this.instance.balanceOf(this.deployer)).should.bignumber.eq(new BN(4000000000000000));
+        (await this.instance.balanceOf(this.receiver)).should.bignumber.eq(new BN(998000000000000));
+    });
+});
+
 describe('Rebase parameters', async () => {
     beforeEach(async () => {
         [this.instance, this.deployer, this.receiver] = await BeforeEach();
     });
 
-    it('Test rebase factors', async() => {
+    it('Test rebase factors', async () => {
         const exchangePrice = toUnitsDenomination(11);
         const targetPrice = toUnitsDenomination(7);
         const values = await this.instance._getRebaseFactorsMock.call(exchangePrice, targetPrice, 5);
@@ -186,7 +230,7 @@ describe('Rebase parameters', async () => {
         maxFactor.should.bignumber.eq(UNIT);
     });
 
-    it('Test rebase factors (more epochs)', async() => {
+    it('Test rebase factors (more epochs)', async () => {
         await this.instance._setEpochMock(13);
         const decreasePerEpoch = await this.instance._getDecreasePerEpochMock();
 
@@ -200,7 +244,7 @@ describe('Rebase parameters', async () => {
         maxFactor.should.bignumber.eq(UNIT.add(new BN(decreasePerEpoch * (13 - 1))));
     });
 
-    it('Test rebase factor (max incentive)', async() => {
+    it('Test rebase factor (max incentive)', async () => {
         await this.instance._setEpochMock(500);
         const decreasePerEpoch = await this.instance._getDecreasePerEpochMock();
         const maxIncetive = await this.instance._getMaxIncentiveMock();
@@ -217,7 +261,7 @@ describe('Rebase parameters', async () => {
         maxFactor.should.bignumber.eq(maxIncetive);
     });
 
-    it('Test simple positive rebase', async() => {
+    it('Test simple positive rebase', async () => {
         const exchangePrice = toUnitsDenomination(12);
         const targetPrice = toUnitsDenomination(11);
 
@@ -228,7 +272,7 @@ describe('Rebase parameters', async () => {
         (await this.instance.balanceOf(this.deployer)).should.bignumber.eq(new BN(5090909090000000));
     });
 
-    it('Test simple negative rebase', async() => {
+    it('Test simple negative rebase', async () => {
         const exchangePrice = toUnitsDenomination(20);
         const targetPrice = toUnitsDenomination(21);
 
