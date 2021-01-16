@@ -27,4 +27,8 @@ contract EnumerableFifoTest {
         uint256 maxFactor, uint256[4] memory valuesArray) public returns (int256) {
         return userBalance.rebaseUserFunds(maxIncentiveEpoch, factorDecreasePerEpoch, maxFactor, valuesArray);
     }
+
+    function adjustValue(uint256 value, uint256 userIncentiveFactor, uint256[4] memory valuesArray, bool excluded) public returns (uint256) {
+        return EnumerableFifo.adjustValue(value, userIncentiveFactor, valuesArray, excluded);
+    }
 }

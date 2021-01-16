@@ -172,9 +172,9 @@ contract Token is Context, IERC20, Ownable, Pausable, Rebaseable {
 
         for (uint256 i = 0; i < _excluded.length(); i++) {
             uint256 owned = _tokenOwned[_excluded.at(i)];
-            int256 newValueSign = owned.mul(currentNetMultiplier).div(UNIT).toInt256Safe();
-
-            supplyChange = supplyChange.add(newValueSign.sub(owned.toInt256Safe()));
+            uint256 newOwned = EnumerableFifo.adjustValue(owned, UNIT, valuesArray, true);
+            _tokenOwned[_excluded.at(i)] = newOwned;
+            supplyChange = supplyChange.add(newOwned.toInt256Safe().sub(owned.toInt256Safe()));
         }
 
         if (supplyChange >= 0) {

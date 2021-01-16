@@ -249,8 +249,7 @@ library EnumerableFifo {
                 uint256 decreaseValue = factorDecreasePerEpoch.mul(epochDiff);
                 rebaseFactor = maxFactor.sub(decreaseValue, "Max user adjusted rebase factor cannot be lower than 0");
             }
-
-            _updateValueAtKey(map._inner, currentKey, _adjustValue(currentValue, rebaseFactor, valuesArray));
+            _updateValueAtKey(map._inner, currentKey, adjustValue(currentValue, rebaseFactor, valuesArray, false));
 
             (currentKey, nextKey, currentValue) = _get(map._inner, nextKey);
         }
@@ -261,18 +260,20 @@ library EnumerableFifo {
 
     /*
     * @dev Calculates user adjusted rebase factor.
-    * @param maxIncentiveEpoch Epoch which gives user maxFactor.
-    * @param factorDecreasePerStep User incentive drops by that number each epoch. It is 10**DECIMALS based value.
-    * @param maxFactor Maximum incentive possible for epoch <= minAllowedKey. It is 10**DECIMALS based value.
+    * @param value User funds.
+    * @param userIncentiveFactor Special incentive param for user.
     * @param valuesArray 4 uint256 values (preRebaseRate, postRebaseRate, currentNetMultiplier, UNIT).
     */
-    function _adjustValue(uint256 value, uint256 userIncentiveFactor,uint256[4] memory valuesArray)
-        pure public returns (uint256) {
+    function adjustValue(uint256 value, uint256 userIncentiveFactor, uint256[4] memory valuesArray, bool excluded)
+        public returns (uint256) {
 
         uint256 currentNetMultiplier = valuesArray[2];
         uint256 valuesBase = valuesArray[3];
 
-        value = value.div(valuesArray[0]);
+        if (!excluded) {
+            value = value.div(valuesArray[0]);
+        }
+
         // Unwraps amount from 'reflection' to token.
         if (currentNetMultiplier < valuesBase) {
             // Multiplier is lower than '1 * 10**DECIMALS', so we have to decrease funds.
@@ -300,6 +301,9 @@ library EnumerableFifo {
         }
         // Wraps amount with 'reflection' with a new rate. New rate is bigger, because user earned fee (if there was at
         // least 1 transaction in passing epoch).
-        return value.mul(valuesArray[1]);
+        if (!excluded) {
+            return value.mul(valuesArray[1]);
+        }
+        return value;
     }
 }
