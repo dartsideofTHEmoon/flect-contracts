@@ -282,4 +282,21 @@ describe('Rebase parameters', async () => {
         (await this.instance.totalSupply()).should.bignumber.eq(new BN(4880952385000000));
         (await this.instance.balanceOf(this.deployer)).should.bignumber.eq(new BN(4880952385000000));
     });
+
+    it('Test rebase of excluded and included accounts together', async () => {
+        await this.instance.excludeAccount(this.deployer, {from: this.deployer});
+        await this.instance.transfer(this.receiver, INTIAL_SUPPLY.div(new BN(2)), {from: this.deployer});
+        (await this.instance.balanceOf(this.deployer)).should.bignumber.eq(new BN(2500000000000000));
+        (await this.instance.balanceOf(this.receiver)).should.bignumber.eq(new BN(2500000000000000));
+
+        const exchangePrice = toUnitsDenomination(15);
+        const targetPrice = toUnitsDenomination(10);
+        await this.instance.setMonetaryPolicy(this.deployer, {from: this.deployer});
+        await this.instance.rebase(exchangePrice, targetPrice, 1, {from: this.deployer});
+
+        (await this.instance.balanceOf(this.deployer)).should.bignumber.eq(new BN(3750000000000000));
+        (await this.instance.balanceOf(this.receiver)).should.bignumber.eq(new BN(3757515030060120));
+        (await this.instance.totalSupply()).should.bignumber.eq(new BN(7507515030060120));
+        await this.instance.includeAccount(this.deployer, {from: this.deployer});
+    });
 });

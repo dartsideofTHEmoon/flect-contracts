@@ -175,6 +175,8 @@ contract Token is Context, IERC20, Ownable, Pausable, Rebaseable {
             uint256 newOwned = EnumerableFifo.adjustValue(owned, UNIT, valuesArray, true);
             _tokenOwned[_excluded.at(i)] = newOwned;
             supplyChange = supplyChange.add(newOwned.toInt256Safe().sub(owned.toInt256Safe()));
+
+            _netShareOwned[_excluded.at(i)].rebaseUserFunds(~uint32(0), 0, UNIT, valuesArray);
         }
 
         if (supplyChange >= 0) {

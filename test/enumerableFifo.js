@@ -60,7 +60,6 @@ describe('Simple math', async () => {
         (await this.instance.getSum()).should.bignumber.eq(new BN(125));
     });
 
-
     it('Check adjust value - no user incentive', async () => {
         let newValue = await this.instance.adjustValue.call(toUnitsDenomination(25000000), toUnitsDenomination(1),
             [1, 1, toUnitsDenomination(11).div(new BN(10)), toUnitsDenomination(1)], true);
@@ -88,9 +87,14 @@ describe('Test rebase', async () => {
     });
 
     it('Simple rebase', async () => {
-        // await this.instance.add(100000000000); // 100 * 10**9
-        // const totalChange = await this.instance.rebaseUserFunds(1, 0, 3 * 10**9, [10, 11, 10 ** 9, 10 ** 9]);
-        // console.log(totalChange);
-        // totalChange.should.bignumber.eq(new BN(1));
+        await this.instance.add(toUnitsDenomination(100));
+        const totalChange = await this.instance.rebaseUserFunds.call(1, 0, toUnitsDenomination(3), [10, 11, toUnitsDenomination(1), toUnitsDenomination(1)]);
+        totalChange.should.bignumber.eq(toUnitsDenomination(1));
+    });
+
+    it('Check epoch calculation', async () => {
+        await this.instance.add(toUnitsDenomination(100));
+        const totalChange = await this.instance.rebaseUserFunds.call(1, 0, toUnitsDenomination(3), [10, 11, toUnitsDenomination(1), toUnitsDenomination(1)]);
+        totalChange.should.bignumber.eq(toUnitsDenomination(1));
     });
 });
