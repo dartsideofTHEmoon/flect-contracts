@@ -42,7 +42,7 @@ describe('Initialization', async () => {
     it('should transfer 5M tokens to the deployer', async () => {
         (await this.instance.balanceOf.call(this.deployer)).should.be.bignumber.eq(INTIAL_SUPPLY);
         const events = await this.instance.getPastEvents();
-        const log = events[1];  // First one is OwnershipTransferred from 'Ownable'
+        const log = events[2];  // First one is OwnershipTransferred from 'Ownable'
         expect(log.event).to.eq('Transfer');
         expect(log.args.from).to.eq(ZERO_ADDRESS);
         expect(log.args.to).to.eq(this.deployer);
@@ -50,7 +50,7 @@ describe('Initialization', async () => {
     });
 
     it('should set the owner', async () => {
-        expect(await this.instance.owner()).to.equal(this.deployer);
+        expect(await this.instance.hasRole('0x00', this.deployer));
     });
 
     it('should have correct name name', async () => {
@@ -265,7 +265,7 @@ describe('Rebase parameters', async () => {
         const exchangePrice = toUnitsDenomination(12);
         const targetPrice = toUnitsDenomination(11);
 
-        await this.instance.setMonetaryPolicy(this.deployer, {from: this.deployer});
+        await this.instance.grantRole("0x01", this.deployer, {from: this.deployer});
         await this.instance.rebase(exchangePrice, targetPrice, 5, {from: this.deployer});
 
         (await this.instance.totalSupply()).should.bignumber.eq(new BN(5090909090000000));
@@ -276,7 +276,7 @@ describe('Rebase parameters', async () => {
         const exchangePrice = toUnitsDenomination(20);
         const targetPrice = toUnitsDenomination(21);
 
-        await this.instance.setMonetaryPolicy(this.deployer, {from: this.deployer});
+        await this.instance.grantRole("0x01", this.deployer, {from: this.deployer});
         await this.instance.rebase(exchangePrice, targetPrice, 2, {from: this.deployer});
 
         (await this.instance.totalSupply()).should.bignumber.eq(new BN(4880952385000000));
@@ -291,12 +291,22 @@ describe('Rebase parameters', async () => {
 
         const exchangePrice = toUnitsDenomination(15);
         const targetPrice = toUnitsDenomination(10);
-        await this.instance.setMonetaryPolicy(this.deployer, {from: this.deployer});
+        await this.instance.grantRole("0x01", this.deployer, {from: this.deployer});
         await this.instance.rebase(exchangePrice, targetPrice, 1, {from: this.deployer});
 
         (await this.instance.balanceOf(this.deployer)).should.bignumber.eq(new BN(3750000000000000));
         (await this.instance.balanceOf(this.receiver)).should.bignumber.eq(new BN(3757515030060120));
         (await this.instance.totalSupply()).should.bignumber.eq(new BN(7507515030060120));
+
         await this.instance.includeAccount(this.deployer, {from: this.deployer});
+        (await this.instance.balanceOf(this.deployer)).should.bignumber.eq(new BN(3757515030060120));
+        (await this.instance.balanceOf(this.receiver)).should.bignumber.eq(new BN(3750000000000000));
+        (await this.instance.totalSupply()).should.bignumber.eq(new BN(7507515030060120));
+
+        await this.instance.excludeAccount(this.receiver, {from: this.deployer});
+        await this.instance.excludeAccount(this.deployer, {from: this.deployer});
+        (await this.instance.balanceOf(this.deployer)).should.bignumber.eq(new BN(3757515030060120));
+        (await this.instance.balanceOf(this.receiver)).should.bignumber.eq(new BN(3750000000000000));
+        (await this.instance.totalSupply()).should.bignumber.eq(new BN(7507515030060120));
     });
 });

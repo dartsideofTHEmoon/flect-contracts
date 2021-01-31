@@ -5,6 +5,7 @@
 
 pragma solidity >=0.6.0 <0.8.0;
 
+import "openzeppelin-solidity/contracts/access/AccessControl.sol";
 import "openzeppelin-solidity/contracts/GSN/Context.sol";
 import "openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
@@ -17,7 +18,7 @@ import "./utils/UInt256Lib.sol";
 import "./utils/EnumerableFifo.sol";
 import "./utils/Rebaseable.sol";
 
-contract Token is Context, IERC20, Ownable, Pausable, Rebaseable {
+contract Token is Context, IERC20, AccessControl, Pausable, Rebaseable {
     using SafeMath for uint256;
     using SafeMathInt for int256;
     using UInt256Lib for uint256;
@@ -51,11 +52,15 @@ contract Token is Context, IERC20, Ownable, Pausable, Rebaseable {
 
     // V. Special administrator variables
     mapping (address => bool) private _banned;
+    bytes32 public constant MONETARY_POLICY_ROLE = bytes32(uint256(1));
 
     constructor () public {
-        _netShareOwned[_msgSender()].add(_epoch, _reflectionTotal);
-        _included.add(_msgSender());
-        emit Transfer(address(0), _msgSender(), _initialTotalSupply);
+        address owner = _msgSender();
+        _netShareOwned[owner].add(_epoch, _reflectionTotal);
+        _included.add(owner);
+        _setupRole(DEFAULT_ADMIN_ROLE, owner);
+        _setupRole(MONETARY_POLICY_ROLE, owner);
+        emit Transfer(address(0), owner, _initialTotalSupply);
     }
 
     // VI. User special incentives parameters.
@@ -67,6 +72,17 @@ contract Token is Context, IERC20, Ownable, Pausable, Rebaseable {
     // How long transaction history to keep (in days).
     uint32 internal constant _maxHistoryLen = uint32((_maxIncentive - UNIT) / _decreasePerEpoch); // 2x / 0.02
 
+    // ----- Access control -----
+    modifier onlyAdmin() {
+        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "Restricted to admins.");
+        _;
+    }
+
+    modifier onlyMonetaryPolicy() {
+        require(hasRole(MONETARY_POLICY_ROLE, _msgSender()), "Caller is not the monetary policy");
+        _;
+    }
+    // ----- End access control -----
 
     // ----- Public erc20 view functions -----
     function name() public pure returns (string memory) {
@@ -146,10 +162,6 @@ contract Token is Context, IERC20, Ownable, Pausable, Rebaseable {
 
 
     // ----- Public rebase state modifiers -----
-    function setMonetaryPolicy(address monetaryPolicy_) external onlyOwner {
-        _setMonetaryPolicy(monetaryPolicy_);
-    }
-
     function rebase(uint256 exchangeRate, uint256 targetRate, int256 rebaseLag) external override onlyMonetaryPolicy returns (uint256) {
         if (targetRate == exchangeRate) {
             _finalizeRebase();
@@ -191,30 +203,30 @@ contract Token is Context, IERC20, Ownable, Pausable, Rebaseable {
     // ----- End of rebase state modifiers -----
 
 
-    // ----- Administrator only functions (onlyOwner) -----
-    function pause() public onlyOwner {
+    // ----- Administrator only functions (onlyAdmin) -----
+    function pause() public onlyAdmin {
         _pause();
     }
 
-    function unpause() public onlyOwner {
+    function unpause() public onlyAdmin {
         _unpause();
     }
 
-    function banUser(address user) public onlyOwner {
+    function banUser(address user) public onlyAdmin {
         _banned[user] = true;
         if (!_excluded.contains(user)) {
             excludeAccount(user);
         }
     }
 
-    function unbanUser(address user, bool includeUser) public onlyOwner {
+    function unbanUser(address user, bool includeUser) public onlyAdmin {
         delete _banned[user];
         if (includeUser) {
             includeAccount(user);
         }
     }
 
-    function excludeAccount(address account) public onlyOwner {
+    function excludeAccount(address account) public onlyAdmin {
         require(!_excluded.contains(account), "Account is already excluded");
         uint256 reflectionOwned = _netShareOwned[account].getSum();
         if(reflectionOwned > 0) {
@@ -224,7 +236,7 @@ contract Token is Context, IERC20, Ownable, Pausable, Rebaseable {
         _excluded.add(account);
     }
 
-    function includeAccount(address account) public onlyOwner {
+    function includeAccount(address account) public onlyAdmin {
         require(_excluded.contains(account), "Account isn't excluded");
         require(!_included.contains(account), "Account is already included");
 
