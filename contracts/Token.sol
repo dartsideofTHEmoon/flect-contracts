@@ -17,6 +17,7 @@ import "./utils/SafeMathInt.sol";
 import "./utils/UInt256Lib.sol";
 import "./utils/EnumerableFifo.sol";
 import "./utils/Rebaseable.sol";
+import "./mocks/DebugHelpers.sol";
 
 contract Token is Context, IERC20, AccessControl, Pausable, Rebaseable {
     using SafeMath for uint256;
@@ -52,7 +53,9 @@ contract Token is Context, IERC20, AccessControl, Pausable, Rebaseable {
 
     // V. Special administrator variables
     mapping (address => bool) private _banned;
-    bytes32 public constant MONETARY_POLICY_ROLE = bytes32(uint256(1));
+    bytes32 public constant MONETARY_POLICY_ROLE = keccak256("MONETARY_POLICY_ROLE"); // 0x901ebb412049abe4673b7c942b9b01ba7e8a61bb1e7e0da5426bdcd9a7a3a7e3
+    bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE"); // 0x9f2df0fed2c77648de5860a4cc508cd0818c85b8b8a1ab4ceeef8d981c8956a6
+    bytes32 public constant BURNER_ROLE = keccak256("BURNER_ROLE"); // 0x3c11d16cbaffd01df69ce1c404f6340ee057498f5f00246190ea54220576a848
 
     constructor () public {
         address owner = _msgSender();
@@ -60,6 +63,8 @@ contract Token is Context, IERC20, AccessControl, Pausable, Rebaseable {
         _included.add(owner);
         _setupRole(DEFAULT_ADMIN_ROLE, owner);
         _setupRole(MONETARY_POLICY_ROLE, owner);
+        _setupRole(MINTER_ROLE, owner);
+        _setupRole(BURNER_ROLE, owner);
         emit Transfer(address(0), owner, _initialTotalSupply);
     }
 

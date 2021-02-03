@@ -11,13 +11,17 @@ require('chai')
     .use(require('chai-bn')(BN))
     .should();
 
-
 const DECIMALS = 9;
 const INTIAL_SUPPLY = toUnitsDenomination(5 * 10 ** 6);
 const UNIT = toUnitsDenomination(1);
 const MAX_UINT224 = new BN(2).pow(new BN(223));
 const INITIAL_REFLECTION = MAX_UINT224.sub(MAX_UINT224.umod(INTIAL_SUPPLY));
 const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
+
+const ADMIN_ROLE = '0x0000000000000000000000000000000000000000000000000000000000000000';
+const MONETARY_POLICY_ROLE = '0x901ebb412049abe4673b7c942b9b01ba7e8a61bb1e7e0da5426bdcd9a7a3a7e3';
+const MINTER_ROLE = '0x9f2df0fed2c77648de5860a4cc508cd0818c85b8b8a1ab4ceeef8d981c8956a6';
+const BURNER_ROLE = '0x3c11d16cbaffd01df69ce1c404f6340ee057498f5f00246190ea54220576a848';
 
 function toUnitsDenomination(x) {
     return new BN(x).mul(new BN(10 ** DECIMALS));
@@ -120,6 +124,18 @@ describe('Admin actions', function () {
 
         preExcludeBalance.should.bignumber.eq(postExcludeBalance);
         postExcludeBalance.should.bignumber.eq(postReIncludeBalance);
+    });
+
+    it('check init ACL\'s', async () => {
+        expect(await this.instance.hasRole(ADMIN_ROLE, this.deployer)).to.eq(true);
+        expect(await this.instance.hasRole(MONETARY_POLICY_ROLE, this.deployer)).to.eq(true);
+        expect(await this.instance.hasRole(BURNER_ROLE, this.deployer)).to.eq(true);
+        expect(await this.instance.hasRole(MINTER_ROLE, this.deployer)).to.eq(true);
+
+        expect(await this.instance.getRoleAdmin(ADMIN_ROLE)).to.eq(ADMIN_ROLE);
+        expect(await this.instance.getRoleAdmin(MONETARY_POLICY_ROLE)).to.eq(ADMIN_ROLE);
+        expect(await this.instance.getRoleAdmin(BURNER_ROLE)).to.eq(ADMIN_ROLE);
+        expect(await this.instance.getRoleAdmin(MINTER_ROLE)).to.eq(ADMIN_ROLE);
     });
 });
 
