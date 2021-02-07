@@ -44,12 +44,6 @@ contract TokenMonetaryPolicy is Initializable, ContextUpgradeable, AccessControl
     // (eg) An oracle value of 1.5e9 it would mean 1 STAB is trading for $1.50.
     IOracle public tokenPriceOracle;
 
-    // If the current exchange rate is within this fractional distance from the target, no supply
-    // update is performed. Fixed point number--same format as the rate.
-    // (ie) abs(rate - targetRate) / targetRate < deviationThreshold, then no supply change.
-    // DECIMALS Fixed point number.
-    uint256 public deviationThreshold;
-
     // The rebase lag parameter, used to dampen the applied supply adjustment by 1 / rebaseLag
     // Check setRebaseLag comments for more details.
     // Natural number, no decimal places.
@@ -104,7 +98,6 @@ contract TokenMonetaryPolicy is Initializable, ContextUpgradeable, AccessControl
         __Context_init_unchained();
         __AccessControl_init_unchained();
 
-        deviationThreshold = 0;
         rebaseLag = 1;
         minRebaseTimeIntervalSec = 1 days;
         rebaseWindowOffsetSec = 79200;
@@ -219,17 +212,6 @@ contract TokenMonetaryPolicy is Initializable, ContextUpgradeable, AccessControl
     }
 
     /**
-     * @notice Sets the deviation threshold fraction. If the exchange rate given by the market
-     *         oracle is within this fractional distance from the targetRate, then no supply
-     *         modifications are made. DECIMALS fixed point number.
-     * @param deviationThreshold_ The new exchange rate threshold fraction.
-     */
-    function setDeviationThreshold(uint256 deviationThreshold_) external onlyAdmin
-    {
-        deviationThreshold = deviationThreshold_;
-    }
-
-    /**
      * @notice Sets the rebase lag parameter.
                It is used to dampen the applied supply adjustment by 1 / rebaseLag
                If the rebase lag R, equals 1, the smallest value for R, then the full supply
@@ -240,7 +222,7 @@ contract TokenMonetaryPolicy is Initializable, ContextUpgradeable, AccessControl
      */
     function setRebaseLag(int256 rebaseLag_) external onlyAdmin
     {
-        require(rebaseLag_ > 0);
+        require(rebaseLag_ > 0, "rebase lag should be bigger than 0");
         rebaseLag = rebaseLag_;
     }
 
