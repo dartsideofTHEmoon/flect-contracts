@@ -3,6 +3,7 @@ pragma solidity >=0.6.0 <0.8.0;
 import "openzeppelin-solidity/contracts/access/AccessControl.sol";
 import "openzeppelin-solidity/contracts/GSN/Context.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
+import "openzeppelin-solidity/contracts/proxy/Initializable.sol";
 
 import "./Token.sol";
 import "./utils/SafeMathInt.sol";
@@ -21,7 +22,7 @@ interface IOracle {
  *      This component regulates the token supply of the StabToken ERC20 token in response to
  *      market oracles.
  */
-contract TokenMonetaryPolicy is Context, AccessControl {
+contract TokenMonetaryPolicy is Context, Initializable, AccessControl {
     using SafeMath for uint256;
     using SafeMathInt for int256;
     using UInt256Lib for uint256;
@@ -98,10 +99,8 @@ contract TokenMonetaryPolicy is Context, AccessControl {
      *      It is called at the time of contract creation to invoke parent class initializers and
      *      initialize the contract's state variables.
      */
-    constructor(Token STAB_, uint256 startMcap) public
+    function initialize(Token STAB_, uint256 startMcap) public initializer
     {
-        //__Ownable_init();
-
         deviationThreshold = 0;
         rebaseLag = 1;
         minRebaseTimeIntervalSec = 1 days;

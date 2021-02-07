@@ -5,8 +5,6 @@
 
 pragma solidity >=0.6.0 <0.8.0;
 
-import "openzeppelin-solidity/contracts/access/Ownable.sol";
-
 /**
  * @dev Interface of 'rebase able' coin type.
  */

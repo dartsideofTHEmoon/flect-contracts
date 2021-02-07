@@ -34,6 +34,7 @@ async function BeforeEach() {
     await Token.detectNetwork();
     await Token.link('EnumerableFifo', library.address);
     const instance = await Token.new({from: deployer});
+    await instance.initialize({from: deployer});
 
     return [instance, deployer, receiver];
 }
@@ -46,7 +47,7 @@ describe('Initialization', async () => {
     it('should transfer 5M tokens to the deployer', async () => {
         (await this.instance.balanceOf.call(this.deployer)).should.be.bignumber.eq(INTIAL_SUPPLY);
         const events = await this.instance.getPastEvents();
-        const log = events[2];  // First one is OwnershipTransferred from 'Ownable'
+        const log = events[4];  // First one is OwnershipTransferred from 'Ownable'
         expect(log.event).to.eq('Transfer');
         expect(log.args.from).to.eq(ZERO_ADDRESS);
         expect(log.args.to).to.eq(this.deployer);

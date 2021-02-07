@@ -7,19 +7,20 @@ pragma solidity >=0.6.0 <0.8.0;
 
 import "openzeppelin-solidity/contracts/access/AccessControl.sol";
 import "openzeppelin-solidity/contracts/GSN/Context.sol";
-import "openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
+import "openzeppelin-solidity/contracts/proxy/Initializable.sol";
+import "openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
 import "openzeppelin-solidity/contracts/utils/Address.sol";
 import "openzeppelin-solidity/contracts/utils/EnumerableSet.sol";
 import "openzeppelin-solidity/contracts/utils/Pausable.sol";
-import "openzeppelin-solidity/contracts/access/Ownable.sol";
 import "./utils/SafeMathInt.sol";
 import "./utils/UInt256Lib.sol";
 import "./utils/EnumerableFifo.sol";
 import "./utils/Rebaseable.sol";
 import "./mocks/DebugHelpers.sol";
 
-contract Token is Context, IERC20, AccessControl, Pausable, Rebaseable {
+
+contract Token is Context, Initializable, IERC20, AccessControl, Pausable, Rebaseable {
     using SafeMath for uint256;
     using SafeMathInt for int256;
     using UInt256Lib for uint256;
@@ -34,8 +35,8 @@ contract Token is Context, IERC20, AccessControl, Pausable, Rebaseable {
 
     // II. Variables responsible for counting balances and network shares
     uint256 private constant MAX = ~uint256(0) / (1 << 32); // Leave some space for UNIT to grow during rebases and funds migrations.
-    uint256 private constant UNIT = 10**_decimals;
-    uint256 private constant _initialTotalSupply = 5 * 10**6 * UNIT;
+    uint256 private constant UNIT = 10 ** _decimals;
+    uint256 private constant _initialTotalSupply = 5 * 10 ** 6 * UNIT;
     uint256 private _totalSupply = _initialTotalSupply;
     uint256 internal _reflectionTotal = MAX - (MAX % _totalSupply);
     uint256 internal constant _reflectionPerToken = (MAX - (MAX % _initialTotalSupply)) / _initialTotalSupply;
@@ -43,21 +44,21 @@ contract Token is Context, IERC20, AccessControl, Pausable, Rebaseable {
     uint256 private _transactionFeeEpoch = 0;
 
     // III. Variables responsible for keeping user account balances
-    mapping (address => mapping (address => uint256)) private _allowances;
-    mapping (address => EnumerableFifo.U32ToU256Queue) private _netShareOwned;
-    mapping (address => uint256) private _tokenOwned;
+    mapping(address => mapping(address => uint256)) private _allowances;
+    mapping(address => EnumerableFifo.U32ToU256Queue) private _netShareOwned;
+    mapping(address => uint256) private _tokenOwned;
 
     // IV. Variables responsible for keeping address 'types'
     EnumerableSet.AddressSet private _excluded;
     EnumerableSet.AddressSet private _included;
 
     // V. Special administrator variables
-    mapping (address => bool) private _banned;
+    mapping(address => bool) private _banned;
     bytes32 public constant MONETARY_POLICY_ROLE = keccak256("MONETARY_POLICY_ROLE"); // 0x901ebb412049abe4673b7c942b9b01ba7e8a61bb1e7e0da5426bdcd9a7a3a7e3
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE"); // 0x9f2df0fed2c77648de5860a4cc508cd0818c85b8b8a1ab4ceeef8d981c8956a6
     bytes32 public constant BURNER_ROLE = keccak256("BURNER_ROLE"); // 0x3c11d16cbaffd01df69ce1c404f6340ee057498f5f00246190ea54220576a848
 
-    constructor () public {
+    function initialize() public initializer {
         address owner = _msgSender();
         _netShareOwned[owner].add(_epoch, _reflectionTotal);
         _included.add(owner);
@@ -159,8 +160,8 @@ contract Token is Context, IERC20, AccessControl, Pausable, Rebaseable {
         return _included.contains(account);
     }
 
-    function tokenFromReflection(uint256 reflectionAmount) public view returns(uint256) {
-        uint256 currentRate =  _getRate();
+    function tokenFromReflection(uint256 reflectionAmount) public view returns (uint256) {
+        uint256 currentRate = _getRate();
         return reflectionAmount.div(currentRate);
     }
     // ----- End of public view functions for additional features -----
@@ -199,7 +200,7 @@ contract Token is Context, IERC20, AccessControl, Pausable, Rebaseable {
         if (supplyChange >= 0) {
             _totalSupply = _totalSupply.add(uint256(supplyChange));
         } else {
-            _totalSupply = _totalSupply.sub(uint256(-supplyChange));
+            _totalSupply = _totalSupply.sub(uint256(- supplyChange));
         }
 
         _finalizeRebase();
@@ -234,7 +235,7 @@ contract Token is Context, IERC20, AccessControl, Pausable, Rebaseable {
     function excludeAccount(address account) public onlyAdmin {
         require(!_excluded.contains(account), "Account is already excluded");
         uint256 reflectionOwned = _netShareOwned[account].getSum();
-        if(reflectionOwned > 0) {
+        if (reflectionOwned > 0) {
             _tokenOwned[account] = tokenFromReflection(reflectionOwned);
             _included.remove(account);
         }
@@ -352,7 +353,7 @@ contract Token is Context, IERC20, AccessControl, Pausable, Rebaseable {
 
     function _getValues(uint256 tAmount, address sender) private returns (uint256, uint256, uint256, uint256, uint256, bool) {
         (uint256 tTransferAmount, uint256 tFee) = _getValuesInToken(tAmount);
-        uint256 currentRate =  _getRate();
+        uint256 currentRate = _getRate();
 
         uint256 additionalFee = 0;
         if (_included.contains(sender)) {
@@ -379,12 +380,12 @@ contract Token is Context, IERC20, AccessControl, Pausable, Rebaseable {
         return (rAmount, rTransferAmount, rFee.add(tFeeAdditional.mul(currentRate)));
     }
 
-    function _getRate() private view returns(uint256) {
+    function _getRate() private view returns (uint256) {
         (uint256 rSupply, uint256 tSupply) = _getCurrentSupply(_reflectionTotal);
         return rSupply.div(tSupply);
     }
 
-    function _getCurrentSupply(uint256 reflectionTotal_) private view returns(uint256, uint256) {
+    function _getCurrentSupply(uint256 reflectionTotal_) private view returns (uint256, uint256) {
         uint256 rSupply = reflectionTotal_;
         uint256 tSupply = _totalSupply;
         for (uint256 i = 0; i < _excluded.length(); i++) {
@@ -396,16 +397,17 @@ contract Token is Context, IERC20, AccessControl, Pausable, Rebaseable {
         return (rSupply, tSupply);
     }
 
-    function _getMinEpoch() internal view returns(uint32) {
+    function _getMinEpoch() internal view returns (uint32) {
         if (_epoch <= _maxHistoryLen) {
-            return 1; // Epoch counts from 1.
+            return 1;
+            // Epoch counts from 1.
         } else {
             return _epoch - _maxHistoryLen;
         }
     }
 
     // ----- Private rebase state modifiers -----
-    function _getRebaseFactors(uint256 exchangeRate, uint256 targetRate, int256 rebaseLag) internal view returns(uint32, uint256, uint256) {
+    function _getRebaseFactors(uint256 exchangeRate, uint256 targetRate, int256 rebaseLag) internal view returns (uint32, uint256, uint256) {
         // 1. minEpoch
         uint32 minEpoch = _getMinEpoch();
 
@@ -415,7 +417,8 @@ contract Token is Context, IERC20, AccessControl, Pausable, Rebaseable {
         int256 rebaseDelta = UNIT.toInt256Safe().mul(exchangeRate.toInt256Safe().sub(targetRateSigned)).div(targetRateSigned);
         // Apply the Dampening factor and construct multiplier.
 
-        require(rebaseLag > 0); //TODO this actually can be lower, but need to be implemented. When this factor is lower treat it as leverage.
+        require(rebaseLag > 0);
+        //TODO this actually can be lower, but need to be implemented. When this factor is lower treat it as leverage.
         uint256 currentNetMultiplier = uint256(UNIT.toInt256Safe().add(rebaseDelta.div(rebaseLag)));
 
         // 3. maxFactor
@@ -433,7 +436,7 @@ contract Token is Context, IERC20, AccessControl, Pausable, Rebaseable {
         _reflectionTotal = _calcMaxReflection(_totalSupply);
     }
 
-    function _getPostRebaseRate() private view returns(uint256) {
+    function _getPostRebaseRate() private view returns (uint256) {
         (uint256 rSupply, uint256 tSupply) = _getCurrentSupply(_calcMaxReflection(_totalSupply));
         return rSupply.div(tSupply);
     }
