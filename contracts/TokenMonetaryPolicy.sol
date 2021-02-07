@@ -78,7 +78,8 @@ contract TokenMonetaryPolicy is Initializable, ContextUpgradeable, AccessControl
     uint256 private constant MAX_SUPPLY = ~(uint256(1) << 255) / MAX_RATE;
 
     // This module orchestrates the rebase execution and downstream notification.
-    address public orchestrator;
+    address public orchestrator; // Address of main orchestrator, using Access Control more can be added manually by admin.
+    bytes32 public constant ORCHESTRATOR_ROLE = keccak256("ORCHESTRATOR_ROLE"); // 0xe098e2e7d2d4d3ca0e3877ceaaf3cdfbd47483f6699688ad12b1d6732deef10b
 
     address[] private charityRecipients;
     mapping(address => bool)    private charityExists;
@@ -111,6 +112,7 @@ contract TokenMonetaryPolicy is Initializable, ContextUpgradeable, AccessControl
         STAB = STAB_;
 
         _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
+        _setupRole(ORCHESTRATOR_ROLE, _msgSender());
     }
 
     /**
@@ -118,6 +120,14 @@ contract TokenMonetaryPolicy is Initializable, ContextUpgradeable, AccessControl
     */
     modifier onlyAdmin() {
         require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "Restricted to admins.");
+        _;
+    }
+
+    /**
+    * @notice Modifier allowing only orchestrator role.
+    */
+    modifier onlyOrchestrator() {
+        require(hasRole(ORCHESTRATOR_ROLE, _msgSender()), "Restricted to orchestrator.");
         _;
     }
 
@@ -136,8 +146,7 @@ contract TokenMonetaryPolicy is Initializable, ContextUpgradeable, AccessControl
      *      Where DeviationFromTargetRate is (TokenPriceOracleRate - targetPrice) / targetPrice
      *      and targetPrice is McapOracleRate / baseMcap
      */
-    function rebase() external {
-        require(_msgSender() == orchestrator, "you are not the orchestrator");
+    function rebase() external onlyOrchestrator {
         require(inRebaseWindow(), "the rebase window is closed");
 
         // This comparison also ensures there is no reentrancy.
@@ -208,7 +217,9 @@ contract TokenMonetaryPolicy is Initializable, ContextUpgradeable, AccessControl
      */
     function setOrchestrator(address orchestrator_) external onlyAdmin
     {
+        revokeRole(ORCHESTRATOR_ROLE, orchestrator);
         orchestrator = orchestrator_;
+        grantRole(ORCHESTRATOR_ROLE, orchestrator);
     }
 
     /**

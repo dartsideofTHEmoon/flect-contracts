@@ -1,3 +1,4 @@
+const web3 = require("web3");
 const BN = require("bn.js");
 const {accounts, contract} = require('@openzeppelin/test-environment');
 const {expectEvent, expectRevert, time} = require('@openzeppelin/test-helpers');
@@ -39,11 +40,7 @@ async function BeforeEach() {
     return [tokenInstance, monetaryPolicy, deployer, receiver];
 }
 
-async function waitForSomeTime(seconds) {
-    await time.increase(seconds);
-}
-
-describe('Initialization', async () => {
+describe('TokenMonetaryPolicy:initialization', async () => {
     beforeEach(async () => {
         [this.tokenInstance, this.monetaryPolicy, this.deployer, this.receiver] = await BeforeEach();
     });
@@ -235,7 +232,7 @@ describe('TokenMonetaryPolicy:Rebase:accessControl', async () => {
             await this.monetaryPolicy.rebase({from: this.deployer});
             (await this.monetaryPolicy.epoch()).should.bignumber.eq(epoch.add(new BN(1)));
         })
-    });
+    }).timeout(5000);
 
     describe('when rebase called by non-orchestrator', () => {
         it('should fail', async () => {
@@ -243,13 +240,13 @@ describe('TokenMonetaryPolicy:Rebase:accessControl', async () => {
                 await expectRevert(this.monetaryPolicy.rebase({from: this.receiver}), 'Restricted to admins.');
             });
         });
-    });
+    }).timeout(5000);
 });
 
 describe('TokenMonetaryPolicy:RebaseParams', async () => {
     beforeEach(async () => {
         [this.tokenInstance, this.monetaryPolicy, this.deployer, this.receiver] = await BeforeEach();
-    });
+    }).timeout(5000);
 
     it('get rebase params', async () => {
         const mcapOracle = await OracleMock.new('mcap', {from: this.deployer});
@@ -265,5 +262,5 @@ describe('TokenMonetaryPolicy:RebaseParams', async () => {
         mcap.should.bignumber.eq(UNIT.mul(new BN(1050000000)));
         targetRate.should.bignumber.eq(new BN(1050000000));
         tokenPrice.should.bignumber.eq(new BN(1200000000));
-    });
+    }).timeout(5000);
 });

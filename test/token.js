@@ -52,7 +52,7 @@ describe('Initialization', async () => {
         expect(log.args.from).to.eq(ZERO_ADDRESS);
         expect(log.args.to).to.eq(this.deployer);
         log.args.value.should.be.bignumber.eq(INTIAL_SUPPLY);
-    });
+    }).timeout(5000);
 
     it('should set the owner', async () => {
         expect(await this.instance.hasRole('0x00', this.deployer));

@@ -1,7 +1,5 @@
 pragma solidity >=0.6.0 <0.8.0;
 
-import "./Mock.sol";
-
 contract OracleMock {
     bool private _validity = true;
     uint256 private _data;
