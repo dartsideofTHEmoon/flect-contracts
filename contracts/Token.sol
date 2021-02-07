@@ -5,14 +5,14 @@
 
 pragma solidity >=0.6.0 <0.8.0;
 
-import "openzeppelin-solidity/contracts/access/AccessControl.sol";
-import "openzeppelin-solidity/contracts/GSN/Context.sol";
-import "openzeppelin-solidity/contracts/math/SafeMath.sol";
-import "openzeppelin-solidity/contracts/proxy/Initializable.sol";
-import "openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
-import "openzeppelin-solidity/contracts/utils/Address.sol";
-import "openzeppelin-solidity/contracts/utils/EnumerableSet.sol";
-import "openzeppelin-solidity/contracts/utils/Pausable.sol";
+import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/math/SafeMathUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/EnumerableSetUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import "./utils/SafeMathInt.sol";
 import "./utils/UInt256Lib.sol";
 import "./utils/EnumerableFifo.sol";
@@ -20,13 +20,13 @@ import "./utils/Rebaseable.sol";
 import "./mocks/DebugHelpers.sol";
 
 
-contract Token is Context, Initializable, IERC20, AccessControl, Pausable, Rebaseable {
-    using SafeMath for uint256;
+contract Token is Initializable, IERC20Upgradeable, RebaseableUpgradeable, ContextUpgradeable, AccessControlUpgradeable, PausableUpgradeable {
+    using SafeMathUpgradeable for uint256;
     using SafeMathInt for int256;
     using UInt256Lib for uint256;
-    using Address for address;
+    using AddressUpgradeable for address;
     using EnumerableFifo for EnumerableFifo.U32ToU256Queue;
-    using EnumerableSet for EnumerableSet.AddressSet;
+    using EnumerableSetUpgradeable for EnumerableSetUpgradeable.AddressSet;
 
     // I. Base ERC20 variables
     string constant private _name = 'stableflect.finance';
@@ -49,8 +49,8 @@ contract Token is Context, Initializable, IERC20, AccessControl, Pausable, Rebas
     mapping(address => uint256) private _tokenOwned;
 
     // IV. Variables responsible for keeping address 'types'
-    EnumerableSet.AddressSet private _excluded;
-    EnumerableSet.AddressSet private _included;
+    EnumerableSetUpgradeable.AddressSet private _excluded;
+    EnumerableSetUpgradeable.AddressSet private _included;
 
     // V. Special administrator variables
     mapping(address => bool) private _banned;
@@ -59,6 +59,9 @@ contract Token is Context, Initializable, IERC20, AccessControl, Pausable, Rebas
     bytes32 public constant BURNER_ROLE = keccak256("BURNER_ROLE"); // 0x3c11d16cbaffd01df69ce1c404f6340ee057498f5f00246190ea54220576a848
 
     function initialize() public initializer {
+        __AccessControl_init();
+        __Pausable_init();
+
         address owner = _msgSender();
         _netShareOwned[owner].add(_epoch, _reflectionTotal);
         _included.add(owner);

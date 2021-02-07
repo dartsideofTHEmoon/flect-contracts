@@ -8,7 +8,7 @@ pragma solidity >=0.6.0 <0.8.0;
 /**
  * @dev Interface of 'rebase able' coin type.
  */
-abstract contract Rebaseable {
+abstract contract RebaseableUpgradeable {
     /**
      * @dev Notifies STAB contract about a new rebase cycle.
      * @param exchangeRate Current STAB exchange rate.this

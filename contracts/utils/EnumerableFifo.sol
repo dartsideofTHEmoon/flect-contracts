@@ -2,7 +2,7 @@
 
 pragma solidity >=0.6.0 <0.8.0;
 
-import "openzeppelin-solidity/contracts/math/SafeMath.sol";
+import "@openzeppelin/contracts-upgradeable/math/SafeMathUpgradeable.sol";
 import "./UInt256Lib.sol";
 import "./SafeMathInt.sol";
 /**
@@ -11,7 +11,7 @@ import "./SafeMathInt.sol";
  * Types were adjusted to project requirements.
  */
 library EnumerableFifo {
-    using SafeMath for uint256;
+    using SafeMathUpgradeable for uint256;
     using SafeMathInt for int256;
     using UInt256Lib for uint256;
 

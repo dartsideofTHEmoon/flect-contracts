@@ -1,9 +1,9 @@
 pragma solidity >=0.6.0 <0.8.0;
 
-import "openzeppelin-solidity/contracts/access/AccessControl.sol";
-import "openzeppelin-solidity/contracts/GSN/Context.sol";
-import "openzeppelin-solidity/contracts/math/SafeMath.sol";
-import "openzeppelin-solidity/contracts/proxy/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/GSN/ContextUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/math/SafeMathUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/Initializable.sol";
 
 import "./Token.sol";
 import "./utils/SafeMathInt.sol";
@@ -22,8 +22,8 @@ interface IOracle {
  *      This component regulates the token supply of the StabToken ERC20 token in response to
  *      market oracles.
  */
-contract TokenMonetaryPolicy is Context, Initializable, AccessControl {
-    using SafeMath for uint256;
+contract TokenMonetaryPolicy is Initializable, ContextUpgradeable, AccessControlUpgradeable {
+    using SafeMathUpgradeable for uint256;
     using SafeMathInt for int256;
     using UInt256Lib for uint256;
 
@@ -101,6 +101,9 @@ contract TokenMonetaryPolicy is Context, Initializable, AccessControl {
      */
     function initialize(Token STAB_, uint256 startMcap) public initializer
     {
+        __Context_init();
+        __AccessControl_init();
+
         deviationThreshold = 0;
         rebaseLag = 1;
         minRebaseTimeIntervalSec = 1 days;
