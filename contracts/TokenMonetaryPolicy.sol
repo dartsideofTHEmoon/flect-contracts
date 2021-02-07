@@ -101,8 +101,8 @@ contract TokenMonetaryPolicy is Initializable, ContextUpgradeable, AccessControl
      */
     function initialize(Token STAB_, uint256 startMcap) public initializer
     {
-        __Context_init();
-        __AccessControl_init();
+        __Context_init_unchained();
+        __AccessControl_init_unchained();
 
         deviationThreshold = 0;
         rebaseLag = 1;

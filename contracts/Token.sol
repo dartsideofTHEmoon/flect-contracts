@@ -59,8 +59,9 @@ contract Token is Initializable, IERC20Upgradeable, RebaseableUpgradeable, Conte
     bytes32 public constant BURNER_ROLE = keccak256("BURNER_ROLE"); // 0x3c11d16cbaffd01df69ce1c404f6340ee057498f5f00246190ea54220576a848
 
     function initialize() public initializer {
-        __AccessControl_init();
-        __Pausable_init();
+        __Context_init_unchained();
+        __AccessControl_init_unchained();
+        __Pausable_init_unchained();
 
         address owner = _msgSender();
         _netShareOwned[owner].add(_epoch, _reflectionTotal);
