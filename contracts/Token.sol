@@ -37,11 +37,11 @@ contract Token is Initializable, IERC20Upgradeable, RebaseableUpgradeable, Conte
     uint256 private constant MAX = ~uint256(0) / (1 << 32); // Leave some space for UNIT to grow during rebases and funds migrations.
     uint256 private constant UNIT = 10 ** _decimals;
     uint256 private constant _initialTotalSupply = 5 * 10 ** 6 * UNIT;
-    uint256 private _totalSupply = _initialTotalSupply;
-    uint256 internal _reflectionTotal = MAX - (MAX % _totalSupply);
+    uint256 private _totalSupply; // = _initialTotalSupply;
+    uint256 internal _reflectionTotal; // = MAX - (MAX % _totalSupply);
     uint256 internal constant _reflectionPerToken = (MAX - (MAX % _initialTotalSupply)) / _initialTotalSupply;
     // Fees since beginning of an epoch.
-    uint256 private _transactionFeeEpoch = 0;
+    uint256 private _transactionFeeEpoch; // = 0;
 
     // III. Variables responsible for keeping user account balances
     mapping(address => mapping(address => uint256)) private _allowances;
@@ -58,11 +58,27 @@ contract Token is Initializable, IERC20Upgradeable, RebaseableUpgradeable, Conte
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE"); // 0x9f2df0fed2c77648de5860a4cc508cd0818c85b8b8a1ab4ceeef8d981c8956a6
     bytes32 public constant BURNER_ROLE = keccak256("BURNER_ROLE"); // 0x3c11d16cbaffd01df69ce1c404f6340ee057498f5f00246190ea54220576a848
 
+    // VI. User special incentives parameters.
+    //TODO add ability to adjust it later.
+    uint256 internal constant _maxIncentive = 3 * UNIT; // UNIT == no incentive, 2*UNIT = 100% bigger rebase.
+    uint256 internal constant _decreasePerEpoch = UNIT / 100 * 2; // 0.1% * 2 = 0.02 each epoch => 100 days to get +2x
+    // Epoch number.
+    uint32 internal _epoch; // = 1;
+    // How long transaction history to keep (in days).
+    uint32 internal constant _maxHistoryLen = uint32((_maxIncentive - UNIT) / _decreasePerEpoch); // 2x / 0.02
+
     function initialize() public initializer {
         __Context_init_unchained();
         __AccessControl_init_unchained();
         __Pausable_init_unchained();
 
+        //Set up variables
+        _totalSupply = _initialTotalSupply;
+        _reflectionTotal = MAX - (MAX % _totalSupply);
+        _transactionFeeEpoch = 0;
+        _epoch = 1;
+
+        //Set up roles.
         address owner = _msgSender();
         _netShareOwned[owner].add(_epoch, _reflectionTotal);
         _included.add(owner);
@@ -73,15 +89,6 @@ contract Token is Initializable, IERC20Upgradeable, RebaseableUpgradeable, Conte
         emit Transfer(address(0), owner, _initialTotalSupply);
     }
 
-    // VI. User special incentives parameters.
-    //TODO add ability to adjust it later.
-    uint256 internal constant _maxIncentive = 3 * UNIT; // UNIT == no incentive, 2*UNIT = 100% bigger rebase.
-    uint256 internal constant _decreasePerEpoch = UNIT / 100 * 2; // 0.1% * 2 = 0.02 each epoch => 100 days to get +2x
-    // Epoch number.
-    uint32 internal _epoch = 1;
-    // How long transaction history to keep (in days).
-    uint32 internal constant _maxHistoryLen = uint32((_maxIncentive - UNIT) / _decreasePerEpoch); // 2x / 0.02
-
     // ----- Access control -----
     modifier onlyAdmin() {
         require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "Restricted to admins.");
@@ -90,6 +97,16 @@ contract Token is Initializable, IERC20Upgradeable, RebaseableUpgradeable, Conte
 
     modifier onlyMonetaryPolicy() {
         require(hasRole(MONETARY_POLICY_ROLE, _msgSender()), "Caller is not the monetary policy");
+        _;
+    }
+
+    modifier onlyMonetaryPolicyWithMintRole() {
+        require(hasRole(MONETARY_POLICY_ROLE, _msgSender() && hasRole(MINTER_ROLE), _msgSender()), "Caller is not the monetary policy with minter role");
+        _;
+    }
+
+    modifier onlyMonetaryPolicyWithBurnRole() {
+        require(hasRole(MONETARY_POLICY_ROLE, _msgSender() && hasRole(BURNER_ROLE), _msgSender()), "Caller is not the monetary policy with burner role");
         _;
     }
     // ----- End access control -----
@@ -209,6 +226,14 @@ contract Token is Initializable, IERC20Upgradeable, RebaseableUpgradeable, Conte
 
         _finalizeRebase();
         return _totalSupply;
+    }
+
+    function mintMe(uint256 amount) onlyMonetaryPolicyWithMintRole {
+
+    }
+
+    function burnMe(uint256 amount) onlyMonetaryPolicyWithBurnRole {
+
     }
     // ----- End of rebase state modifiers -----
 
