@@ -178,7 +178,7 @@ library EnumerableFifo {
      */
     function sub(U32ToU256Queue storage map, uint256 value) public {
         require(value > 0);
-        require(value <= map._inner._sum);
+        require(value <= map._inner._sum, "Not enough balance");
 
         uint256 leftToSub = value;
         (uint32 currentKey, uint32 nextKey, uint256 currentValue) = _getFirst(map._inner);

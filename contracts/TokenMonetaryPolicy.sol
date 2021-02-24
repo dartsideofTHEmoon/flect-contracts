@@ -8,6 +8,7 @@ import "@openzeppelin/contracts-upgradeable/proxy/Initializable.sol";
 import "./Token.sol";
 import "./utils/SafeMathInt.sol";
 import "./utils/UInt256Lib.sol";
+import "./ChainSwap.sol";
 
 interface IOracle {
     function getData() external view returns (uint256, bool);
@@ -22,7 +23,7 @@ interface IOracle {
  *      This component regulates the token supply of the StabToken ERC20 token in response to
  *      market oracles.
  */
-contract TokenMonetaryPolicy is Initializable, ContextUpgradeable, AccessControlUpgradeable {
+contract TokenMonetaryPolicy is Initializable, ContextUpgradeable, AccessControlUpgradeable, ChainSwap {
     using SafeMathUpgradeable for uint256;
     using SafeMathInt for int256;
     using UInt256Lib for uint256;
@@ -81,20 +82,15 @@ contract TokenMonetaryPolicy is Initializable, ContextUpgradeable, AccessControl
     address public orchestrator; // Address of main orchestrator, using Access Control more can be added manually by admin.
     bytes32 public constant ORCHESTRATOR_ROLE = keccak256("ORCHESTRATOR_ROLE"); // 0xe098e2e7d2d4d3ca0e3877ceaaf3cdfbd47483f6699688ad12b1d6732deef10b
 
-    address[] private charityRecipients;
-    mapping(address => bool)    private charityExists;
-    mapping(address => uint256) private charityIndex;
-    mapping(address => uint256) private charityPercentOnExpansion;
-    mapping(address => uint256) private charityPercentOnContraction;
-    uint256 private totalCharityPercentOnExpansion;
-    uint256 private totalCharityPercentOnContraction;
+    address private whiteListedSigner;
+    string private chainName;
 
     /**
      * @dev ZOS upgradable contract initialization method.
      *      It is called at the time of contract creation to invoke parent class initializers and
      *      initialize the contract's state variables.
      */
-    function initialize(Token STAB_, uint256 startMcap) public initializer
+    function initialize(Token STAB_, uint256 startMcap_, string memory chainName_) public initializer
     {
         __Context_init_unchained();
         __AccessControl_init_unchained();
@@ -107,12 +103,14 @@ contract TokenMonetaryPolicy is Initializable, ContextUpgradeable, AccessControl
         lastRebaseTimestampSec = 0;
         epoch = 1;
 
-        previousMcap = startMcap;
+        previousMcap = startMcap_;
 
         STAB = STAB_;
 
         _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
         _setupRole(ORCHESTRATOR_ROLE, _msgSender());
+        whiteListedSigner = address(_msgSender());
+        chainName = chainName_;
     }
 
     /**
@@ -137,6 +135,14 @@ contract TokenMonetaryPolicy is Initializable, ContextUpgradeable, AccessControl
     function setStabToken(address _STAB) public onlyAdmin
     {
         STAB = Token(_STAB);
+    }
+
+    /**
+    * @notice Change white listed signer.
+    */
+    function setWhiteListedSigner(address newSigner) public onlyAdmin
+    {
+        whiteListedSigner = newSigner;
     }
 
     /**
@@ -171,8 +177,7 @@ contract TokenMonetaryPolicy is Initializable, ContextUpgradeable, AccessControl
     /**
     * @notice Calculates rebase parameters.
     */
-    function getRebaseParams() public view returns (uint256 mcap, uint256 targetRate, uint256 tokenPrice)
-    {
+    function getRebaseParams() public view returns (uint256, uint256, uint256) {
         uint256 mcap;
         bool mcapValid;
         (mcap, mcapValid) = mcapOracle.getData();
@@ -271,5 +276,28 @@ contract TokenMonetaryPolicy is Initializable, ContextUpgradeable, AccessControl
         block.timestamp.mod(minRebaseTimeIntervalSec) >= rebaseWindowOffsetSec &&
         block.timestamp.mod(minRebaseTimeIntervalSec) < (rebaseWindowOffsetSec.add(rebaseWindowLengthSec))
         );
+    }
+
+    /**
+     * @notice First stage - creates migration request.
+     It might be required to allow monetary policy to make transfer of particular amount of tokens before this call.
+     * @param amount - Value of transfer to other chain.
+     * @param toNetwork - Name of a new available chain.
+     * @param toAddress - Users address on a new chain (it is of string type to support different than ETH address formats).
+     * @param timeForUnlock - Maximum time for unlock on new chain, after that chain rollback without password will be possible.
+     */
+    function migrateToOtherChain(uint256 amount, string memory toNetwork, string memory toAddress,
+        uint256 timeForUnlock) public
+    {
+        _migrateToOtherChain(STAB, amount, toNetwork, toAddress, timeForUnlock);
+    }
+
+    /**
+    * @notice Second stage - claims moved funds to a new owner on a new chain.
+    * @param sendTo - user address on a new chain.
+    * @param amount - STAB amount to send.
+    */
+    function claimFromOtherChain(uint64 id, address sendTo, uint256 amount, bytes memory signature) public onlyOrchestrator {
+        _claimFromOtherChain(STAB, id, sendTo, amount, chainName, signature, whiteListedSigner);
     }
 }

@@ -1,10 +1,11 @@
 const BN = require("bn.js");
 const {accounts, contract} = require('@openzeppelin/test-environment');
-const {expectEvent, expectRevert} = require('@openzeppelin/test-helpers');
+const {expectEvent, expectRevert, time} = require('@openzeppelin/test-helpers');
 const {expect} = require('chai');
 
 const Token = contract.fromArtifact("TokenMock");
 const EnumerableFifo = contract.fromArtifact("EnumerableFifo");
+const MonetaryPolicy = contract.fromArtifact("TokenMonetaryPolicy");
 
 require('chai').should();
 require('chai')
@@ -22,6 +23,7 @@ const ADMIN_ROLE = '0x0000000000000000000000000000000000000000000000000000000000
 const MONETARY_POLICY_ROLE = '0x901ebb412049abe4673b7c942b9b01ba7e8a61bb1e7e0da5426bdcd9a7a3a7e3';
 const MINTER_ROLE = '0x9f2df0fed2c77648de5860a4cc508cd0818c85b8b8a1ab4ceeef8d981c8956a6';
 const BURNER_ROLE = '0x3c11d16cbaffd01df69ce1c404f6340ee057498f5f00246190ea54220576a848';
+const BILLION = UNIT.mul(new BN(1000 * 1000 * 1000));
 
 function toUnitsDenomination(x) {
     return new BN(x).mul(new BN(10 ** DECIMALS));
@@ -101,14 +103,14 @@ describe('Admin actions', function () {
     it('banned cannot send transaction', async () => {
         await this.instance.banUser(this.deployer, {from: this.deployer});
 
-        await expectRevert.unspecified(this.instance.transfer(accounts[1], 1, {from: this.deployer}), 'User banned');
+        await expectRevert(this.instance.transfer(accounts[1], 1, {from: this.deployer}), 'User banned');
     });
 
     it('paused token cannot send transaction', async () => {
         const receipt = await this.instance.pause({from: this.deployer});
         expectEvent(receipt, 'Paused', {account: this.deployer});
 
-        await expectRevert.unspecified(this.instance.transfer(accounts[1], 1, {from: this.deployer}),
+        await expectRevert(this.instance.transfer(accounts[1], 1, {from: this.deployer}),
             'Pausable: paused');
     });
 
@@ -183,7 +185,6 @@ describe('Transactions', function () {
         await this.instance.transfer(this.receiver, INTIAL_SUPPLY.sub(new BN(100000)), {from: this.deployer});
         (await this.instance.balanceOf(this.deployer)).should.bignumber.eq(new BN(0));
         (await this.instance.balanceOf(this.receiver)).should.bignumber.eq(new BN(5000000000000000));
-
     });
 });
 
@@ -282,7 +283,7 @@ describe('Rebase parameters', async () => {
         const exchangePrice = toUnitsDenomination(12);
         const targetPrice = toUnitsDenomination(11);
 
-        await this.instance.grantRole("0x01", this.deployer, {from: this.deployer});
+        await this.instance.grantRole(MONETARY_POLICY_ROLE, this.deployer, {from: this.deployer});
         await this.instance.rebase(exchangePrice, targetPrice, 5, {from: this.deployer});
 
         (await this.instance.totalSupply()).should.bignumber.eq(new BN(5090909090000000));
@@ -293,7 +294,7 @@ describe('Rebase parameters', async () => {
         const exchangePrice = toUnitsDenomination(20);
         const targetPrice = toUnitsDenomination(21);
 
-        await this.instance.grantRole("0x01", this.deployer, {from: this.deployer});
+        await this.instance.grantRole(MONETARY_POLICY_ROLE, this.deployer, {from: this.deployer});
         await this.instance.rebase(exchangePrice, targetPrice, 2, {from: this.deployer});
 
         (await this.instance.totalSupply()).should.bignumber.eq(new BN(4880952385000000));
@@ -308,7 +309,7 @@ describe('Rebase parameters', async () => {
 
         const exchangePrice = toUnitsDenomination(15);
         const targetPrice = toUnitsDenomination(10);
-        await this.instance.grantRole("0x01", this.deployer, {from: this.deployer});
+        await this.instance.grantRole(MONETARY_POLICY_ROLE, this.deployer, {from: this.deployer});
         await this.instance.rebase(exchangePrice, targetPrice, 1, {from: this.deployer});
 
         (await this.instance.balanceOf(this.deployer)).should.bignumber.eq(new BN(3750000000000000));

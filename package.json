@@ -25,7 +25,7 @@
     "concurrently": "^5.3.0",
     "ganache-cli": "^6.12.1",
     "mocha": "^8.1.2",
-    "truffle": "^5.1.57"
+    "truffle": "^5.1.65"
   },
   "config": {
     "ganache": {
@@ -39,6 +39,6 @@
     "bn.js": "^4.11.9",
     "chai": "^4.2.0",
     "chai-bn": "^0.2.1",
-    "web3": "^1.3.1"
+    "web3": "^1.3.4"
   }
 }

@@ -17,7 +17,7 @@ import "./utils/SafeMathInt.sol";
 import "./utils/UInt256Lib.sol";
 import "./utils/EnumerableFifo.sol";
 import "./utils/Rebaseable.sol";
-import "./mocks/DebugHelpers.sol";
+import "./ChainSwap.sol";
 
 
 contract Token is Initializable, IERC20Upgradeable, RebaseableUpgradeable, ContextUpgradeable, AccessControlUpgradeable, PausableUpgradeable {
@@ -101,12 +101,12 @@ contract Token is Initializable, IERC20Upgradeable, RebaseableUpgradeable, Conte
     }
 
     modifier onlyMonetaryPolicyWithMintRole() {
-        require(hasRole(MONETARY_POLICY_ROLE, _msgSender() && hasRole(MINTER_ROLE), _msgSender()), "Caller is not the monetary policy with minter role");
+        require(hasRole(MONETARY_POLICY_ROLE, _msgSender()) && hasRole(MINTER_ROLE, _msgSender()), "Caller is not the monetary policy with minter role");
         _;
     }
 
     modifier onlyMonetaryPolicyWithBurnRole() {
-        require(hasRole(MONETARY_POLICY_ROLE, _msgSender() && hasRole(BURNER_ROLE), _msgSender()), "Caller is not the monetary policy with burner role");
+        require(hasRole(MONETARY_POLICY_ROLE, _msgSender()) && hasRole(BURNER_ROLE, _msgSender()), "Caller is not the monetary policy with burner role");
         _;
     }
     // ----- End access control -----
@@ -228,11 +228,16 @@ contract Token is Initializable, IERC20Upgradeable, RebaseableUpgradeable, Conte
         return _totalSupply;
     }
 
-    function mintMe(uint256 amount) onlyMonetaryPolicyWithMintRole {
+    function transferToMonetaryPolicy(address sender, uint256 amount) external onlyMonetaryPolicy returns (bool) {
+        _transfer(sender, _msgSender(), amount);
+        return true;
+    }
+
+    function mint(address owner, uint256 amount) external onlyMonetaryPolicyWithMintRole {
 
     }
 
-    function burnMe(uint256 amount) onlyMonetaryPolicyWithBurnRole {
+    function burn(address owner, uint256 amount) external onlyMonetaryPolicyWithBurnRole {
 
     }
     // ----- End of rebase state modifiers -----

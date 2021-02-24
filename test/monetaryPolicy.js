@@ -1,4 +1,3 @@
-const web3 = require("web3");
 const BN = require("bn.js");
 const {accounts, contract} = require('@openzeppelin/test-environment');
 const {expectEvent, expectRevert, time} = require('@openzeppelin/test-helpers');
@@ -35,7 +34,7 @@ async function BeforeEach() {
     const tokenInstance = await Token.new({from: deployer});
     await tokenInstance.initialize({from: deployer});
     const monetaryPolicy = await MonetaryPolicy.new({from: deployer});
-    await monetaryPolicy.initialize(tokenInstance.address, BILLION, {from: deployer});
+    await monetaryPolicy.initialize(tokenInstance.address, BILLION, "ETH", {from: deployer});
 
     return [tokenInstance, monetaryPolicy, deployer, receiver];
 }
@@ -246,7 +245,7 @@ describe('TokenMonetaryPolicy:Rebase:accessControl', async () => {
 describe('TokenMonetaryPolicy:RebaseParams', async () => {
     beforeEach(async () => {
         [this.tokenInstance, this.monetaryPolicy, this.deployer, this.receiver] = await BeforeEach();
-    }).timeout(5000);
+    });
 
     it('get rebase params', async () => {
         const mcapOracle = await OracleMock.new('mcap', {from: this.deployer});
