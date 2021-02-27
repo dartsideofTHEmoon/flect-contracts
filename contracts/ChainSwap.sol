@@ -1,14 +1,13 @@
 pragma solidity >=0.6.0 <0.8.0;
 
-import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/cryptography/ECDSAUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/math/SafeMathUpgradeable.sol";
+import "@openzeppelin/contracts/cryptography/ECDSA.sol";
+import "@openzeppelin/contracts/utils/Context.sol";
+import "@openzeppelin/contracts-upgradeable/math/SafeMathUpgradeable.sol"; // Use exactly the same version of math lib as Token.
 import "./Token.sol";
 
-contract ChainSwap is ContextUpgradeable {
+contract ChainSwap is Context {
     using SafeMathUpgradeable for uint256;
-    using ECDSAUpgradeable for bytes32;
+    using ECDSA for bytes32;
 
     mapping(address => SwapRequest[]) internal _swapRequests;
 

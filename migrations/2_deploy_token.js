@@ -5,7 +5,6 @@ const EnumerableFifo = artifacts.require("./EnumerableFifo.sol");
 const AddressUpgradeable = artifacts.require("./AddressUpgradeable.sol")
 const EnumerableSetUpgradeable = artifacts.require("./EnumerableSetUpgradeable.sol")
 const Token = artifacts.require("./Token.sol");
-const ECDSAUpgradeable = artifacts.require("./ECDSAUpgradeable.sol")
 const { deployProxy } = require('@openzeppelin/truffle-upgrades');
 
 // JavaScript export
@@ -17,7 +16,6 @@ module.exports = async function(deployer) {
     await deployer.deploy(EnumerableFifo);
     await deployer.deploy(AddressUpgradeable);
     await deployer.deploy(EnumerableSetUpgradeable);
-    await deployer.deploy(ECDSAUpgradeable);
 
     await deployer.link(SafeMathUpgradeable, EnumerableFifo);
     await deployer.link(SafeMathInt, EnumerableFifo);

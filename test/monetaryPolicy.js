@@ -33,8 +33,7 @@ async function BeforeEach() {
     await Token.link('EnumerableFifo', library.address);
     const tokenInstance = await Token.new({from: deployer});
     await tokenInstance.initialize({from: deployer});
-    const monetaryPolicy = await MonetaryPolicy.new({from: deployer});
-    await monetaryPolicy.initialize(tokenInstance.address, BILLION, "ETH", {from: deployer});
+    const monetaryPolicy = await MonetaryPolicy.new(tokenInstance.address, BILLION, "ETH", {from: deployer});
 
     return [tokenInstance, monetaryPolicy, deployer, receiver];
 }
