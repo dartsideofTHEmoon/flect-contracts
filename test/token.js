@@ -1,11 +1,10 @@
 const BN = require("bn.js");
 const {accounts, contract} = require('@openzeppelin/test-environment');
-const {expectEvent, expectRevert, time} = require('@openzeppelin/test-helpers');
+const {expectEvent, expectRevert} = require('@openzeppelin/test-helpers');
 const {expect} = require('chai');
 
 const Token = contract.fromArtifact("TokenMock");
 const EnumerableFifo = contract.fromArtifact("EnumerableFifo");
-const MonetaryPolicy = contract.fromArtifact("TokenMonetaryPolicy");
 
 require('chai').should();
 require('chai')
