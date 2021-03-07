@@ -67,6 +67,10 @@ contract Token is Initializable, IERC20Upgradeable, RebaseableUpgradeable, Conte
     // How long transaction history to keep (in days).
     uint32 internal constant _maxHistoryLen = uint32((_maxIncentive - UNIT) / _decreasePerEpoch); // 2x / 0.02
 
+    // VII. Others
+    event Burned(address indexed from, uint256 amount);
+    event Minted(address indexed from, uint256 amount);
+
     function initialize() public initializer {
         __Context_init_unchained();
         __AccessControl_init_unchained();
@@ -90,23 +94,33 @@ contract Token is Initializable, IERC20Upgradeable, RebaseableUpgradeable, Conte
     }
 
     // ----- Access control -----
+    function requireAdmin() internal view {
+        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "Only admins.");
+    }
+
+    function requireMonetaryPolicy() internal view {
+        require(hasRole(MONETARY_POLICY_ROLE, _msgSender()), "Only monetary policy");
+    }
+
     modifier onlyAdmin() {
-        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "Restricted to admins.");
+        requireAdmin();
         _;
     }
 
     modifier onlyMonetaryPolicy() {
-        require(hasRole(MONETARY_POLICY_ROLE, _msgSender()), "Caller is not the monetary policy");
+        requireMonetaryPolicy();
         _;
     }
 
     modifier onlyMonetaryPolicyWithMintRole() {
-        require(hasRole(MONETARY_POLICY_ROLE, _msgSender()) && hasRole(MINTER_ROLE, _msgSender()), "Caller is not the monetary policy with minter role");
+        requireMonetaryPolicy();
+        require(hasRole(MINTER_ROLE, _msgSender()), "Only minter role");
         _;
     }
 
     modifier onlyMonetaryPolicyWithBurnRole() {
-        require(hasRole(MONETARY_POLICY_ROLE, _msgSender()) && hasRole(BURNER_ROLE, _msgSender()), "Caller is not the monetary policy with burner role");
+        requireMonetaryPolicy();
+        require(hasRole(BURNER_ROLE, _msgSender()), "Only burner role");
         _;
     }
     // ----- End access control -----
@@ -132,52 +146,52 @@ contract Token is Initializable, IERC20Upgradeable, RebaseableUpgradeable, Conte
         return _totalSupply;
     }
 
-    function balanceOf(address account) public view override returns (uint256) {
+    function balanceOf(address account) external view override returns (uint256) {
         if (_excluded.contains(account)) return _tokenOwned[account];
         return tokenFromReflection(_netShareOwned[account].getSum());
     }
 
-    function allowance(address owner, address spender) public view override returns (uint256) {
+    function allowance(address owner, address spender) external view override returns (uint256) {
         return _allowances[owner][spender];
     }
     // ----- End of public erc20 view functions -----
 
 
     // ----- Public erc20 state modifiers -----
-    function transfer(address recipient, uint256 amount) public override returns (bool) {
+    function transfer(address recipient, uint256 amount) external override returns (bool) {
         _transfer(_msgSender(), recipient, amount);
         return true;
     }
 
-    function approve(address spender, uint256 amount) public override returns (bool) {
+    function approve(address spender, uint256 amount) external override returns (bool) {
         _approve(_msgSender(), spender, amount);
         return true;
     }
 
-    function transferFrom(address sender, address recipient, uint256 amount) public override returns (bool) {
+    function transferFrom(address sender, address recipient, uint256 amount) external override returns (bool) {
         _transfer(sender, recipient, amount);
-        _approve(sender, _msgSender(), _allowances[sender][_msgSender()].sub(amount, "ERC20: transfer amount exceeds allowance"));
+        _approve(sender, _msgSender(), _allowances[sender][_msgSender()].sub(amount, "Exceeds allowance"));
         return true;
     }
 
-    function increaseAllowance(address spender, uint256 addedValue) public virtual returns (bool) {
+    function increaseAllowance(address spender, uint256 addedValue) external virtual returns (bool) {
         _approve(_msgSender(), spender, _allowances[_msgSender()][spender].add(addedValue));
         return true;
     }
 
-    function decreaseAllowance(address spender, uint256 subtractedValue) public virtual returns (bool) {
-        _approve(_msgSender(), spender, _allowances[_msgSender()][spender].sub(subtractedValue, "ERC20: decreased allowance below zero"));
+    function decreaseAllowance(address spender, uint256 subtractedValue) external virtual returns (bool) {
+        _approve(_msgSender(), spender, _allowances[_msgSender()][spender].sub(subtractedValue, "Below zero"));
         return true;
     }
     // ----- End of public erc20 state modifiers -----
 
 
     // ----- Public view functions for additional features -----
-    function isExcluded(address account) public view returns (bool) {
+    function isExcluded(address account) external view returns (bool) {
         return _excluded.contains(account);
     }
 
-    function isIncluded(address account) public view returns (bool) {
+    function isIncluded(address account) external view returns (bool) {
         return _included.contains(account);
     }
 
@@ -234,11 +248,46 @@ contract Token is Initializable, IERC20Upgradeable, RebaseableUpgradeable, Conte
     }
 
     function mint(address owner, uint256 amount) external onlyMonetaryPolicyWithMintRole {
+        if (!_included.contains(owner) && !_excluded.contains(owner)) {
+            _included.add(owner);
+        }
+        uint256 amountFixed = amount.mul(_reflectionPerToken);
+        _reflectionTotal = _reflectionTotal.add(amountFixed);
+        _netShareOwned[owner].add(_epoch, amountFixed);
+        _netShareOwned[owner].flatten(_getMinEpoch());
+        if (_excluded.contains(owner)) {
+            _tokenOwned[owner] = tokenFromReflection(_netShareOwned[owner].getSum());
+        }
+        _totalSupply = _totalSupply.add(amount);
 
+        emit Minted(owner, amount);
+    }
+
+    function _burn(address owner, uint256 amount) internal {
+        uint256 amountFixed = amount.mul(_reflectionPerToken);
+        _reflectionTotal = _reflectionTotal.sub(amountFixed);
+        _netShareOwned[owner].sub(amountFixed);
+        uint256 leftFunds = _netShareOwned[owner].getSum();
+        if (_excluded.contains(owner)) {
+            _tokenOwned[owner] = tokenFromReflection(_netShareOwned[owner].getSum());
+            if (leftFunds == 0) {
+                _excluded.remove(owner);
+            }
+        } else if (leftFunds == 0) {
+            _included.remove(owner);
+        }
+
+        _totalSupply = _totalSupply.sub(amount);
+
+        emit Burned(owner, amount);
+    }
+
+    function burnMyTokens(uint256 amount) external {
+        return _burn(_msgSender(), amount);
     }
 
     function burn(address owner, uint256 amount) external onlyMonetaryPolicyWithBurnRole {
-
+        return _burn(owner, amount);
     }
     // ----- End of rebase state modifiers -----
 
@@ -252,14 +301,14 @@ contract Token is Initializable, IERC20Upgradeable, RebaseableUpgradeable, Conte
         _unpause();
     }
 
-    function banUser(address user) public onlyAdmin {
+    function banUser(address user) external onlyAdmin {
         _banned[user] = true;
         if (!_excluded.contains(user)) {
             excludeAccount(user);
         }
     }
 
-    function unbanUser(address user, bool includeUser) public onlyAdmin {
+    function unbanUser(address user, bool includeUser) external onlyAdmin {
         delete _banned[user];
         if (includeUser) {
             includeAccount(user);
@@ -267,7 +316,7 @@ contract Token is Initializable, IERC20Upgradeable, RebaseableUpgradeable, Conte
     }
 
     function excludeAccount(address account) public onlyAdmin {
-        require(!_excluded.contains(account), "Account is already excluded");
+        require(!_excluded.contains(account), "Is excluded");
         uint256 reflectionOwned = _netShareOwned[account].getSum();
         if (reflectionOwned > 0) {
             _tokenOwned[account] = tokenFromReflection(reflectionOwned);
@@ -277,31 +326,24 @@ contract Token is Initializable, IERC20Upgradeable, RebaseableUpgradeable, Conte
     }
 
     function includeAccount(address account) public onlyAdmin {
-        require(_excluded.contains(account), "Account isn't excluded");
-        require(!_included.contains(account), "Account is already included");
+        require(_excluded.contains(account), "Isn't excluded");
+        require(!_included.contains(account), "Is included");
 
         _included.add(account);
         _excluded.remove(account);
         _tokenOwned[account] = 0;
     }
     // ----- End of administrator part -----
-
-    function _calcMaxReflection(uint256 totalSupply_) private pure returns (uint256){
-        return totalSupply_ * _reflectionPerToken;
-    }
-
     function _approve(address owner, address spender, uint256 amount) private {
-        require(owner != address(0), "ERC20: approve from the zero address");
-        require(spender != address(0), "ERC20: approve to the zero address");
+        require(owner != address(0) && spender != address(0), "Zero address");
 
         _allowances[owner][spender] = amount;
         emit Approval(owner, spender, amount);
     }
 
     function _transfer(address sender, address recipient, uint256 amount) private whenNotPaused {
-        require(sender != address(0), "ERC20: transfer from the zero address");
-        require(recipient != address(0), "ERC20: transfer to the zero address");
-        require(amount > 0, "Transfer amount must be greater than zero");
+        require(sender != address(0) && recipient != address(0), "Zero address");
+        require(amount > 0, "Amount zero");
         require(!_banned[sender], "User banned");
 
         bool senderExcluded = _excluded.contains(sender);
@@ -467,11 +509,12 @@ contract Token is Initializable, IERC20Upgradeable, RebaseableUpgradeable, Conte
         emit LogRebase(_epoch, _totalSupply, _transactionFeeEpoch);
         ++_epoch;
         _transactionFeeEpoch = 0;
-        _reflectionTotal = _calcMaxReflection(_totalSupply);
+
+        _reflectionTotal = _totalSupply.mul(_reflectionPerToken);
     }
 
     function _getPostRebaseRate() private view returns (uint256) {
-        (uint256 rSupply, uint256 tSupply) = _getCurrentSupply(_calcMaxReflection(_totalSupply));
+        (uint256 rSupply, uint256 tSupply) = _getCurrentSupply(_totalSupply.mul(_reflectionPerToken));
         return rSupply.div(tSupply);
     }
     // ----- End of private rebase state modifiers -----

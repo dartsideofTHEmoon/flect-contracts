@@ -327,3 +327,76 @@ describe('Rebase parameters', async () => {
         (await this.instance.totalSupply()).should.bignumber.eq(new BN(7507515030060120));
     });
 });
+
+describe('Mint tokens', async () => {
+    beforeEach(async () => {
+        [this.instance, this.deployer, this.receiver] = await BeforeEach();
+    });
+
+    it('check access (has only monetary role)', async () => {
+        const user = this.receiver;
+        expect(await this.instance.hasRole(MONETARY_POLICY_ROLE, user)).to.eq(false);
+        expect(await this.instance.hasRole(MINTER_ROLE, user)).to.eq(false);
+        await this.instance.grantRole(MONETARY_POLICY_ROLE, user, {from: this.deployer});
+
+        await expectRevert(this.instance.mint(this.deployer, UNIT, {from: user}),
+            'Only minter role');
+    });
+
+    it('check access (has only minter role)', async () => {
+        const user = this.receiver;
+        expect(await this.instance.hasRole(MONETARY_POLICY_ROLE, user)).to.eq(false);
+        expect(await this.instance.hasRole(MINTER_ROLE, user)).to.eq(false);
+        await this.instance.grantRole(MINTER_ROLE, user, {from: this.deployer});
+
+        await expectRevert(this.instance.mint(this.deployer, UNIT, {from: user}),
+            'Only monetary policy');
+    });
+
+    it('check total supply after mint', async () => {
+        await this.instance.grantRole(MONETARY_POLICY_ROLE, this.deployer, {from: this.deployer});
+        await this.instance.grantRole(MONETARY_POLICY_ROLE, this.deployer, {from: this.deployer});
+        const initialSupply = await this.instance.totalSupply.call();
+        const mintAmount = UNIT.mul(new BN(10**6));
+        await this.instance.mint(this.receiver, mintAmount, {from: this.deployer});
+        (await this.instance.totalSupply.call()).should.bignumber.eq(initialSupply.add(mintAmount));
+        (await this.instance.balanceOf.call(this.receiver)).should.bignumber.eq(mintAmount);
+        (await this.instance.balanceOf.call(this.deployer)).should.bignumber.eq(initialSupply);
+    });
+});
+
+describe('Burn tokens', async () => {
+    beforeEach(async () => {
+        [this.instance, this.deployer, this.receiver] = await BeforeEach();
+    });
+
+    it('check access (has only monetary role)', async () => {
+        const user = this.receiver;
+        expect(await this.instance.hasRole(MONETARY_POLICY_ROLE, user)).to.eq(false);
+        expect(await this.instance.hasRole(BURNER_ROLE, user)).to.eq(false);
+        await this.instance.grantRole(MONETARY_POLICY_ROLE, user, {from: this.deployer});
+
+        await expectRevert(this.instance.burn(this.deployer, UNIT, {from: user}),
+            'Only burner role');
+    });
+
+    it('check access (has only burner role)', async () => {
+        const user = this.receiver;
+        expect(await this.instance.hasRole(MONETARY_POLICY_ROLE, user)).to.eq(false);
+        expect(await this.instance.hasRole(BURNER_ROLE, user)).to.eq(false);
+        await this.instance.grantRole(BURNER_ROLE, user, {from: this.deployer});
+
+        await expectRevert(this.instance.burn(this.deployer, UNIT, {from: user}),
+            'Only monetary policy');
+    });
+
+    it('check total supply after burn', async () => {
+        await this.instance.grantRole(MONETARY_POLICY_ROLE, this.deployer, {from: this.deployer});
+        await this.instance.grantRole(MONETARY_POLICY_ROLE, this.deployer, {from: this.deployer});
+        const initialSupply = await this.instance.totalSupply.call();
+        const burnAmount = UNIT.mul(new BN(10**6));
+        await this.instance.burn(this.deployer, burnAmount, {from: this.deployer});
+        (await this.instance.totalSupply.call()).should.bignumber.eq(initialSupply.sub(burnAmount));
+        (await this.instance.balanceOf.call(this.deployer)).should.bignumber.eq(initialSupply.sub(burnAmount));
+    });
+});
