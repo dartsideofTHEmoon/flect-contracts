@@ -265,7 +265,7 @@ library EnumerableFifo {
     * @param valuesArray 4 uint256 values (preRebaseRate, postRebaseRate, currentNetMultiplier, UNIT).
     */
     function adjustValue(uint256 value, uint256 userIncentiveFactor, uint256[4] memory valuesArray, bool excluded)
-        public returns (uint256) {
+        public pure returns (uint256) {
 
         uint256 currentNetMultiplier = valuesArray[2];
         uint256 valuesBase = valuesArray[3];

@@ -30,6 +30,7 @@ contract TokenMonetaryPolicy is Context, AccessControl, ChainSwap {
     event LogRebase(
         uint256 indexed epoch,
         uint256 exchangeRate,
+        uint256 targetRate,
         uint256 mcap,
         int256 requestedSupplyAdjustment,
         uint256 timestampSec
@@ -107,6 +108,10 @@ contract TokenMonetaryPolicy is Context, AccessControl, ChainSwap {
         _setupRole(ORCHESTRATOR_ROLE, _msgSender());
         whiteListedSigner = address(_msgSender());
         chainName = chainName_;
+
+        // amount * _feeMultiplier / _feeDivisor;
+        _feeMultiplier = 1;
+        _feeDivisor = 1;
     }
 
     /**
@@ -142,6 +147,17 @@ contract TokenMonetaryPolicy is Context, AccessControl, ChainSwap {
     }
 
     /**
+    * @notice Change fee paid on chain swap.
+    */
+    function setFeeParams(uint256 multiplier, uint256 divisor) public onlyAdmin
+    {
+        require(multiplier <= divisor, "Really? Bonus for chain swap? xD");
+
+        _feeMultiplier = multiplier;
+        _feeDivisor = divisor;
+    }
+
+    /**
      * @notice Initiates a new rebase operation, provided the minimum time period has elapsed.
      *
      * @dev The supply adjustment equals (_totalSupply * DeviationFromTargetRate) / rebaseLag
@@ -164,7 +180,7 @@ contract TokenMonetaryPolicy is Context, AccessControl, ChainSwap {
         (mcap, targetRate, tokenPrice) = getRebaseParams();
 
         uint256 newSupply = STAB.rebase(tokenPrice, targetRate, rebaseLag);
-        emit LogRebase(epoch, tokenPrice, mcap, beforeSupply.sub(newSupply.toInt256Safe()), block.timestamp);
+        emit LogRebase(epoch, tokenPrice, targetRate, mcap, beforeSupply.sub(newSupply.toInt256Safe()), block.timestamp);
 
         previousMcap = mcap;
         epoch = epoch.add(1);
@@ -285,7 +301,7 @@ contract TokenMonetaryPolicy is Context, AccessControl, ChainSwap {
     function migrateToOtherChain(uint256 amount, string memory toNetwork, string memory toAddress,
         uint256 timeForUnlock) public
     {
-        _migrateToOtherChain(STAB, amount, toNetwork, toAddress, timeForUnlock);
+        _migrateToOtherChain(STAB, amount, toNetwork, toAddress, timeForUnlock, epoch);
     }
 
     /**

@@ -392,7 +392,6 @@ describe('Burn tokens', async () => {
 
     it('check total supply after burn', async () => {
         await this.instance.grantRole(MONETARY_POLICY_ROLE, this.deployer, {from: this.deployer});
-        await this.instance.grantRole(MONETARY_POLICY_ROLE, this.deployer, {from: this.deployer});
         const initialSupply = await this.instance.totalSupply.call();
         const burnAmount = UNIT.mul(new BN(10**6));
         await this.instance.burn(this.deployer, burnAmount, {from: this.deployer});

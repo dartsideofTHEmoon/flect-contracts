@@ -251,7 +251,7 @@ contract Token is Initializable, IERC20Upgradeable, RebaseableUpgradeable, Conte
         if (!_included.contains(owner) && !_excluded.contains(owner)) {
             _included.add(owner);
         }
-        uint256 amountFixed = amount.mul(_reflectionPerToken);
+        uint256 amountFixed = amount.mul(_getRate());
         _reflectionTotal = _reflectionTotal.add(amountFixed);
         _netShareOwned[owner].add(_epoch, amountFixed);
         _netShareOwned[owner].flatten(_getMinEpoch());
@@ -264,7 +264,7 @@ contract Token is Initializable, IERC20Upgradeable, RebaseableUpgradeable, Conte
     }
 
     function _burn(address owner, uint256 amount) internal {
-        uint256 amountFixed = amount.mul(_reflectionPerToken);
+        uint256 amountFixed = amount.mul(_getRate());
         _reflectionTotal = _reflectionTotal.sub(amountFixed);
         _netShareOwned[owner].sub(amountFixed);
         uint256 leftFunds = _netShareOwned[owner].getSum();
