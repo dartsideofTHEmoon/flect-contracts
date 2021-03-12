@@ -3,7 +3,7 @@ pragma solidity >=0.6.0 <0.8.0;
 import "../ChainSwap.sol";
 
 contract ChainSwapMock is ChainSwap {
-    function getClaimedFunds(bytes32 hash) view public returns(bool) {
+    function areFundsClaimed(bytes32 hash) view public returns(bool) {
         return _claimedFunds[hash];
     }
 
