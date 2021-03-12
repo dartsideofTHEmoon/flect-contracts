@@ -115,10 +115,17 @@ contract TokenMonetaryPolicy is Context, AccessControl, ChainSwap {
     }
 
     /**
+    * @notice Function checks if caller is an admin.
+    */
+    function requireAdmin() internal view {
+        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "Restricted to admins.");
+    }
+
+    /**
     * @notice Modifier allowing only admin role.
     */
     modifier onlyAdmin() {
-        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "Restricted to admins.");
+        requireAdmin();
         _;
     }
 
