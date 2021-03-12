@@ -22,8 +22,9 @@ contract ChainSwapMock is ChainSwap {
         _feeDivisor = divisor;
     }
 
-    function createMessageHashMock(uint256 id, address sendTo, uint256 amount, string memory chainName) public pure returns (bytes32) {
-        return _createMessageHash(id, sendTo, amount, chainName);
+    function createMessageHashMock(uint256 id, address sendTo, uint256 amount, string memory chainName, uint256 epoch)
+        public pure returns (bytes32) {
+        return _createMessageHash(id, sendTo, amount, chainName, epoch);
     }
 
     function getMessageBeforeHash(uint64 id, address sendTo, uint256 amount, string memory chainName) public pure returns (bytes memory) {
@@ -31,7 +32,7 @@ contract ChainSwapMock is ChainSwap {
     }
 
     function claimFromOtherChainMock(Token _stab, uint64 id, address sendTo, uint256 amount, string memory chainName,
-        bytes memory signature, address whiteListedSigner) public returns(bool) {
-        return _claimFromOtherChain(_stab, id, sendTo, amount, chainName, signature, whiteListedSigner);
+        uint256 epoch, bytes memory signature, address whiteListedSigner) public returns(bool) {
+        return _claimFromOtherChain(_stab, id, sendTo, amount, chainName, epoch, signature, whiteListedSigner);
     }
 }

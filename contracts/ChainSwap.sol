@@ -61,13 +61,13 @@ contract ChainSwap is Context {
         emit MigrateRequest(_msgSender(), toNetwork, toAddress, amountAfterFee);
     }
 
-    function _createMessageHash(uint256 id, address sendTo, uint256 amount, string memory chainName) internal pure returns (bytes32) {
-        return keccak256(abi.encodePacked(id, sendTo, amount, chainName));
+    function _createMessageHash(uint256 id, address sendTo, uint256 amount, string memory chainName, uint256 epoch) internal pure returns (bytes32) {
+        return keccak256(abi.encodePacked(id, sendTo, amount, chainName, epoch));
     }
 
     function _claimFromOtherChain(Token _stab, uint256 id, address sendTo, uint256 amount, string memory chainName,
-        bytes memory signature, address whiteListedSigner) internal returns (bool) {
-        bytes32 messageHash = _createMessageHash(id, sendTo, amount, chainName);
+        uint256 epoch, bytes memory signature, address whiteListedSigner) internal returns (bool) {
+        bytes32 messageHash = _createMessageHash(id, sendTo, amount, chainName, epoch);
         if (_verifySignature(messageHash, signature, whiteListedSigner) == true) {
             require(_claimedFunds[messageHash] == false, "Funds already claimed.");
             _claimedFunds[messageHash] = true;

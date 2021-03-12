@@ -111,8 +111,8 @@ describe('ChainSwap', async () => {
 
     describe('test creating a hash', async () => {
         it('check produces the same hash', async () => {
-            const hash = await this.chainSwapInstance.createMessageHashMock(124, '0x47e1090438d3Da2173a28D156D5E217d62551FF3', 1501, 'TBSC');
-            const testHash = web3.utils.soliditySha3(124, '0x47e1090438d3Da2173a28D156D5E217d62551FF3', 1501, 'TBSC');
+            const hash = await this.chainSwapInstance.createMessageHashMock(124, '0x47e1090438d3Da2173a28D156D5E217d62551FF3', 1501, 'TBSC', 34);
+            const testHash = web3.utils.soliditySha3(124, '0x47e1090438d3Da2173a28D156D5E217d62551FF3', 1501, 'TBSC', 34);
             expect(hash).to.equal(testHash);
         })
     });
@@ -120,11 +120,11 @@ describe('ChainSwap', async () => {
     describe('claim from other chain', async () => {
         it('invalid signature', async () => {
             const signerAddr = this.deployer;
-            const sig = fixSignature(await web3.eth.sign(web3.utils.soliditySha3(12812313, this.receiver, 25000, 'BSC'),
+            const sig = fixSignature(await web3.eth.sign(web3.utils.soliditySha3(12812313, this.receiver, 25000, 'BSC', 333),
                 signerAddr));
 
             expect(await this.chainSwapInstance.claimFromOtherChainMock.call(this.tokenInstance.address, 124,
-                this.receiver, 25000, 'BSC', sig, signerAddr, {from: this.receiver})).to.be.false;
+                this.receiver, 25000, 'BSC', 333, sig, signerAddr, {from: this.receiver})).to.be.false;
         });
 
         it('valid signature, not permissions', async () => {
@@ -133,12 +133,12 @@ describe('ChainSwap', async () => {
                 signerAddr));
 
             expectRevert(this.chainSwapInstance.claimFromOtherChainMock(this.tokenInstance.address, 124,
-                this.receiver, 25000, 'BSC', sig, signerAddr, {from: this.receiver}), 'Only monetary policy');
+                this.receiver, 25000, 'BSC', 123, sig, signerAddr, {from: this.receiver}), 'Only monetary policy');
         });
 
         it('valid signature, access granted', async () => {
             const signerAddr = this.deployer;
-            const msgHash = web3.utils.soliditySha3(124, this.receiver, 25000, 'BSC');
+            const msgHash = web3.utils.soliditySha3(124, this.receiver, 25000, 'BSC', 17);
             const sig = fixSignature(await web3.eth.sign(msgHash, signerAddr));
             await this.tokenInstance.grantRole(MONETARY_POLICY_ROLE, this.chainSwapInstance.address, {from: this.deployer});
             await this.tokenInstance.grantRole(MINTER_ROLE, this.chainSwapInstance.address, {from: this.deployer});
@@ -147,7 +147,7 @@ describe('ChainSwap', async () => {
             (await this.tokenInstance.balanceOf(this.deployer)).should.bignumber.eq(new BN(5000000000000000));
 
             await this.chainSwapInstance.claimFromOtherChainMock(this.tokenInstance.address, 124,
-                this.receiver, 25000, 'BSC', sig, signerAddr, {from: this.receiver});
+                this.receiver, 25000, 'BSC', 17, sig, signerAddr, {from: this.receiver});
 
             (await this.tokenInstance.balanceOf(this.receiver)).should.bignumber.eq(new BN(24950));
             (await this.tokenInstance.balanceOf(this.chainSwapInstance.address)).should.bignumber.eq(new BN(0));
@@ -157,13 +157,13 @@ describe('ChainSwap', async () => {
 
         it('valid signature, access granted, double spend', async () => {
             const signerAddr = this.deployer;
-            const msgHash = web3.utils.soliditySha3(124, this.receiver, 25000, 'BSC');
+            const msgHash = web3.utils.soliditySha3(124, this.receiver, 25000, 'BSC', 35);
             const sig = fixSignature(await web3.eth.sign(msgHash, signerAddr));
             await this.tokenInstance.grantRole(MONETARY_POLICY_ROLE, this.chainSwapInstance.address, {from: this.deployer});
             await this.tokenInstance.grantRole(MINTER_ROLE, this.chainSwapInstance.address, {from: this.deployer});
 
             await this.chainSwapInstance.claimFromOtherChainMock(this.tokenInstance.address, 124,
-                this.receiver, 25000, 'BSC', sig, signerAddr, {from: this.receiver});
+                this.receiver, 25000, 'BSC', 35, sig, signerAddr, {from: this.receiver});
             expectRevert(this.chainSwapInstance.claimFromOtherChainMock(this.tokenInstance.address, 124, this.receiver,
                 25000, 'BSC', sig, signerAddr, {from: this.receiver}), 'Funds already claimed.');
             expect(await this.chainSwapInstance.areFundsClaimed(msgHash)).to.be.true;

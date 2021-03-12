@@ -317,6 +317,6 @@ contract TokenMonetaryPolicy is Context, AccessControl, ChainSwap {
     * @param amount - STAB amount to send.
     */
     function claimFromOtherChain(uint64 id, address sendTo, uint256 amount, bytes memory signature) public onlyOrchestrator {
-        _claimFromOtherChain(STAB, id, sendTo, amount, chainName, signature, whiteListedSigner);
+        _claimFromOtherChain(STAB, id, sendTo, amount, chainName, epoch, signature, whiteListedSigner);
     }
 }
