@@ -109,6 +109,23 @@ describe('ChainSwap', async () => {
         });
     });
 
+    describe('test set claimed', async () => {
+       it('set to true', async() => {
+           const msgHash = web3.utils.soliditySha3(124, this.receiver, 25000, 'BSC', 55);
+           expect(await this.chainSwapInstance.areFundsClaimed(msgHash)).to.be.false;
+           await this.chainSwapInstance.setClaimedMock(124, this.receiver, 25000, 'BSC', 55, true);
+           expect(await this.chainSwapInstance.areFundsClaimed(msgHash)).to.be.true;
+       });
+
+        it('set to false', async() => {
+            const msgHash = web3.utils.soliditySha3(124, this.receiver, 25000, 'BSC', 55);
+            await this.chainSwapInstance.setClaimedMock(124, this.receiver, 25000, 'BSC', 55, true);
+            expect(await this.chainSwapInstance.areFundsClaimed(msgHash)).to.be.true;
+            await this.chainSwapInstance.setClaimedMock(124, this.receiver, 25000, 'BSC', 55, false);
+            expect(await this.chainSwapInstance.areFundsClaimed(msgHash)).to.be.false;
+        });
+    });
+
     describe('test creating a hash', async () => {
         it('check produces the same hash', async () => {
             const hash = await this.chainSwapInstance.createMessageHashMock(124, '0x47e1090438d3Da2173a28D156D5E217d62551FF3', 1501, 'TBSC', 34);

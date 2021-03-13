@@ -165,6 +165,13 @@ contract TokenMonetaryPolicy is Context, AccessControl, ChainSwap {
     }
 
     /**
+    * @notice Block or unblock claim for message hash.
+    */
+    function setClaimed(uint256 id, address sendTo, uint256 amount, string memory chainName, uint256 epoch_, bool toValue) public onlyAdmin {
+        return _setClaimed(id, sendTo, amount, chainName, epoch_, toValue);
+    }
+
+    /**
      * @notice Initiates a new rebase operation, provided the minimum time period has elapsed.
      *
      * @dev The supply adjustment equals (_totalSupply * DeviationFromTargetRate) / rebaseLag

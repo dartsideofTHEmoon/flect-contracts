@@ -25,17 +25,40 @@ contract ChainSwap is Context {
     }
 
     event MigrateRequest(address indexed owner, string toNetwork, string toAddress, uint256 amount);
+    event FundsClaimed(address indexed owner, uint256 amount);
 
+    /**
+    * @notice Block or unblock claim for message hash.
+    */
+    function _setClaimed(uint256 id, address sendTo, uint256 amount, string memory chainName, uint256 epoch,
+        bool toValue) internal {
+        bytes32 messageHash = _createMessageHash(id, sendTo, amount, chainName, epoch);
+        if (toValue) {
+            _claimedFunds[messageHash] = true;
+        } else {
+            delete _claimedFunds[messageHash];
+        }
+    }
+
+    /**
+    * @notice Verifies ETH signature and checks if 'account' signed it.
+    */
     function _verifySignature(bytes32 messageHash, bytes memory signature, address account) pure internal returns (bool) {
         return messageHash
         .toEthSignedMessageHash()
         .recover(signature) == account;
     }
 
+    /**
+    * @notice Applies fee for migration request.
+    */
     function _applyFee(uint256 amount) internal view returns(uint256) {
         return amount.mul(_feeMultiplier).div(_feeDivisor);
     }
 
+    /**
+    * @notice Starts migration to other chain process.
+    */
     function _migrateToOtherChain(Token _stab, uint256 amount, string memory toNetwork,
         string memory toAddress, uint256 timeForUnlock, uint256 epoch) internal
     {
@@ -61,10 +84,16 @@ contract ChainSwap is Context {
         emit MigrateRequest(_msgSender(), toNetwork, toAddress, amountAfterFee);
     }
 
+    /**
+    * @notice Prepares bytes32 hash from message parameters.
+    */
     function _createMessageHash(uint256 id, address sendTo, uint256 amount, string memory chainName, uint256 epoch) internal pure returns (bytes32) {
         return keccak256(abi.encodePacked(id, sendTo, amount, chainName, epoch));
     }
 
+    /**
+    * @notice Claims funds on destination chain.
+    */
     function _claimFromOtherChain(Token _stab, uint256 id, address sendTo, uint256 amount, string memory chainName,
         uint256 epoch, bytes memory signature, address whiteListedSigner) internal returns (bool) {
         bytes32 messageHash = _createMessageHash(id, sendTo, amount, chainName, epoch);
@@ -72,7 +101,8 @@ contract ChainSwap is Context {
             require(_claimedFunds[messageHash] == false, "Funds already claimed.");
             _claimedFunds[messageHash] = true;
             _stab.mint(address(this), amount);
-            return _stab.transfer(_msgSender(), amount);
+            _stab.transfer(_msgSender(), amount);
+            emit FundsClaimed(_msgSender(), amount);
         }
         return false;
     }

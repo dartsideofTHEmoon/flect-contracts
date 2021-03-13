@@ -246,7 +246,9 @@ contract Token is Initializable, IERC20Upgradeable, RebaseableUpgradeable, Conte
         _transfer(sender, _msgSender(), amount);
         return true;
     }
+    // ----- End of rebase state modifiers -----
 
+    // ----- Public monetary policy actions -----
     function mint(address owner, uint256 amount) external onlyMonetaryPolicyWithMintRole {
         if (!_included.contains(owner) && !_excluded.contains(owner)) {
             _included.add(owner);
@@ -289,8 +291,7 @@ contract Token is Initializable, IERC20Upgradeable, RebaseableUpgradeable, Conte
     function burn(address owner, uint256 amount) external onlyMonetaryPolicyWithBurnRole {
         return _burn(owner, amount);
     }
-    // ----- End of rebase state modifiers -----
-
+    // ----- End of public monetary policy actions -----
 
     // ----- Administrator only functions (onlyAdmin) -----
     function pause() public onlyAdmin {
@@ -334,6 +335,7 @@ contract Token is Initializable, IERC20Upgradeable, RebaseableUpgradeable, Conte
         _tokenOwned[account] = 0;
     }
     // ----- End of administrator part -----
+
     function _approve(address owner, address spender, uint256 amount) private {
         require(owner != address(0) && spender != address(0), "Zero address");
 

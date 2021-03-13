@@ -7,6 +7,10 @@ contract ChainSwapMock is ChainSwap {
         return _claimedFunds[hash];
     }
 
+    function setClaimedMock(uint256 id, address sendTo, uint256 amount, string memory chainName, uint256 epoch, bool toValue) public {
+        return _setClaimed(id, sendTo, amount, chainName, epoch, toValue);
+    }
+
     function verifySignatureMock(bytes32 messageHash, bytes memory signature, address account) pure public returns (bool) {
         return _verifySignature(messageHash, signature, account);
     }
