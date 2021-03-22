@@ -167,8 +167,8 @@ contract TokenMonetaryPolicy is Context, AccessControl, ChainSwap {
     /**
     * @notice Block or unblock claim for message hash.
     */
-    function setClaimed(uint256 id, address sendTo, uint256 amount, string memory chainName, uint256 epoch_, bool toValue) public onlyAdmin {
-        return _setClaimed(id, sendTo, amount, chainName, epoch_, toValue);
+    function setClaimed(uint256 id, address sendTo, uint256 amount, string memory chainName_, uint256 epoch_, bool toValue) public onlyAdmin {
+        return _setClaimed(id, sendTo, amount, chainName_, epoch_, toValue);
     }
 
     /**

@@ -24,8 +24,8 @@ contract ChainSwap is Context {
         address monetaryPolicy;
     }
 
-    event MigrateRequest(address indexed owner, string toNetwork, string toAddress, uint256 amount);
-    event FundsClaimed(address indexed owner, uint256 amount);
+    event MigrateRequest(address owner, string toNetwork, string toAddress, uint256 amount);
+    event FundsClaimed(address owner, uint256 amount);
 
     /**
     * @notice Block or unblock claim for message hash.

@@ -429,7 +429,7 @@ contract Token is Initializable, IERC20Upgradeable, RebaseableUpgradeable, Conte
         _transactionFeeEpoch = _transactionFeeEpoch.add(tFee);
     }
 
-    function _getValues(uint256 tAmount, address sender) private returns (uint256, uint256, uint256, uint256, uint256, bool) {
+    function _getValues(uint256 tAmount, address sender) private view returns (uint256, uint256, uint256, uint256, uint256, bool) {
         (uint256 tTransferAmount, uint256 tFee) = _getValuesInToken(tAmount);
         uint256 currentRate = _getRate();
 
