@@ -259,12 +259,12 @@ contract TokenMonetaryPolicy is Context, AccessControl, ChainSwap {
                If the rebase lag R, equals 1, the smallest value for R, then the full supply
                correction is applied on each rebase cycle.
                If it is greater than 1, then a correction of 1/R of is applied on each rebase.
-               When rebase is lower than 0, then actually it is multiplier.
+               When rebase is lower than 0, then actually it is a multiplier instead of 'lag'.
      * @param rebaseLag_ The new rebase lag parameter.
      */
     function setRebaseLag(int256 rebaseLag_) external onlyAdmin
     {
-        require(rebaseLag_ > 0, "rebase lag should be bigger than 0");
+        require(rebaseLag_ != 0, "rebase lag cannot be 0");
         rebaseLag = rebaseLag_;
     }
 

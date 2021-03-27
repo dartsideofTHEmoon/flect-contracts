@@ -289,6 +289,17 @@ describe('Rebase parameters', async () => {
         (await this.instance.balanceOf(this.deployer)).should.bignumber.eq(new BN(5090909090000000));
     });
 
+    it('Test simple positive rebase with leverage', async () => {
+        const exchangePrice = toUnitsDenomination(12);
+        const targetPrice = toUnitsDenomination(11);
+
+        await this.instance.grantRole(MONETARY_POLICY_ROLE, this.deployer, {from: this.deployer});
+        await this.instance.rebase(exchangePrice, targetPrice, -7, {from: this.deployer});
+
+        (await this.instance.totalSupply()).should.bignumber.eq(new BN(8181818150000000));
+        (await this.instance.balanceOf(this.deployer)).should.bignumber.eq(new BN(8181818150000000));
+    });
+
     it('Test simple negative rebase', async () => {
         const exchangePrice = toUnitsDenomination(20);
         const targetPrice = toUnitsDenomination(21);
@@ -298,6 +309,17 @@ describe('Rebase parameters', async () => {
 
         (await this.instance.totalSupply()).should.bignumber.eq(new BN(4880952385000000));
         (await this.instance.balanceOf(this.deployer)).should.bignumber.eq(new BN(4880952385000000));
+    });
+
+    it('Test simple negative rebase with leverage', async () => {
+        const exchangePrice = toUnitsDenomination(20);
+        const targetPrice = toUnitsDenomination(21);
+
+        await this.instance.grantRole(MONETARY_POLICY_ROLE, this.deployer, {from: this.deployer});
+        await this.instance.rebase(exchangePrice, targetPrice, -3, {from: this.deployer});
+
+        (await this.instance.totalSupply()).should.bignumber.eq(new BN(4285714295000000));
+        (await this.instance.balanceOf(this.deployer)).should.bignumber.eq(new BN(4285714295000000));
     });
 
     it('Test rebase of excluded and included accounts together', async () => {

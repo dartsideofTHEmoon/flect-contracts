@@ -495,9 +495,13 @@ contract Token is Initializable, IERC20Upgradeable, RebaseableUpgradeable, Conte
         int256 rebaseDelta = UNIT.toInt256Safe().mul(exchangeRate.toInt256Safe().sub(targetRateSigned)).div(targetRateSigned);
         // Apply the Dampening factor and construct multiplier.
 
-        require(rebaseLag > 0);
-        //TODO this actually can be lower, but need to be implemented. When this factor is lower treat it as leverage.
-        uint256 currentNetMultiplier = uint256(UNIT.toInt256Safe().add(rebaseDelta.div(rebaseLag)));
+        require(rebaseLag != 0, "rebaseLag == 0");
+        uint256 currentNetMultiplier = 0;
+        if (rebaseLag > 0) {
+            currentNetMultiplier = uint256(UNIT.toInt256Safe().add(rebaseDelta.div(rebaseLag)));
+        } else {
+            currentNetMultiplier = uint256(UNIT.toInt256Safe().sub(rebaseDelta.mul(rebaseLag))); // sub negative number = add
+        }
 
         // 3. maxFactor
         require(_epoch >= minEpoch);
