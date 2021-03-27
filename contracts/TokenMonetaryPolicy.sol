@@ -33,17 +33,23 @@ contract TokenMonetaryPolicy is Context, AccessControl, ChainSwap {
         uint256 targetRate,
         uint256 mcap,
         int256 requestedSupplyAdjustment,
-        uint256 timestampSec
+        uint256 timestampSec,
+        bool reverted
     );
 
     Token public STAB;
+    Token public rSTAB;
 
     // Provides the current market cap, as an 18 decimal fixed point number.
     IOracle public mcapOracle;
 
-    // Market oracle provides the token/USD exchange rate as an 18 decimal fixed point number.
+    // Market oracle provides the STAB/USD exchange rate as an 18 decimal fixed point number.
     // (eg) An oracle value of 1.5e9 it would mean 1 STAB is trading for $1.50.
     IOracle public tokenPriceOracle;
+
+    // Market oracle provides the rSTAB/USD exchange rate as an 18 decimal fixed point number.
+    // (eg) An oracle value of 1.5e9 it would mean 1 STAB is trading for $1.50.
+    IOracle public tokenRevPriceOracle;
 
     // The rebase lag parameter, used to dampen the applied supply adjustment by 1 / rebaseLag
     // Check setRebaseLag comments for more details.
@@ -90,8 +96,7 @@ contract TokenMonetaryPolicy is Context, AccessControl, ChainSwap {
      *      It is called at the time of contract creation to invoke parent class initializers and
      *      initialize the contract's state variables.
      */
-    constructor(Token STAB_, uint256 startMcap_, string memory chainName_) public
-    {
+    constructor(Token STAB_, Token rSTAB_, uint256 startMcap_, string memory chainName_) {
         rebaseLag = 1;
         minRebaseTimeIntervalSec = 1 days;
         rebaseWindowOffsetSec = 79200;
@@ -103,6 +108,7 @@ contract TokenMonetaryPolicy is Context, AccessControl, ChainSwap {
         previousMcap = startMcap_;
 
         STAB = STAB_;
+        rSTAB = rSTAB_;
 
         _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
         _setupRole(ORCHESTRATOR_ROLE, _msgSender());
@@ -138,11 +144,19 @@ contract TokenMonetaryPolicy is Context, AccessControl, ChainSwap {
     }
 
     /**
-    * @notice Sets token instance.
+    * @notice Sets token (long) instance.
     */
     function setStabToken(address _STAB) public onlyAdmin
     {
         STAB = Token(_STAB);
+    }
+
+    /**
+    * @notice Sets reverse (short) token instance.
+    */
+    function setRevStabToken(address _STAB) public onlyAdmin
+    {
+        rSTAB = Token(_STAB);
     }
 
     /**
@@ -172,6 +186,18 @@ contract TokenMonetaryPolicy is Context, AccessControl, ChainSwap {
     }
 
     /**
+    * @notice Perform part of rebase (for one coin).
+    */
+    function partRebase(Token stab_, uint256 mcap, bool reversed) internal {
+        int256 beforeSupply = stab_.totalSupply().toInt256Safe();
+        uint256 targetRate;
+        uint256 tokenPrice;
+        (targetRate, tokenPrice) = reversed ? getRevRebaseParams(mcap) : getRebaseParams(mcap);
+        uint256 newSupply = stab_.rebase(tokenPrice, targetRate, rebaseLag);
+        emit LogRebase(epoch, tokenPrice, targetRate, mcap, beforeSupply.sub(newSupply.toInt256Safe()), block.timestamp, reversed);
+    }
+
+    /**
      * @notice Initiates a new rebase operation, provided the minimum time period has elapsed.
      *
      * @dev The supply adjustment equals (_totalSupply * DeviationFromTargetRate) / rebaseLag
@@ -187,41 +213,58 @@ contract TokenMonetaryPolicy is Context, AccessControl, ChainSwap {
         // Snap the rebase time to the start of this window.
         lastRebaseTimestampSec = block.timestamp.sub(block.timestamp.mod(minRebaseTimeIntervalSec)).add(rebaseWindowOffsetSec);
 
-        int256 beforeSupply = STAB.totalSupply().toInt256Safe();
-        uint256 mcap;
-        uint256 targetRate;
-        uint256 tokenPrice;
-        (mcap, targetRate, tokenPrice) = getRebaseParams();
+        uint256 mcap = getMcap();
 
-        uint256 newSupply = STAB.rebase(tokenPrice, targetRate, rebaseLag);
-        emit LogRebase(epoch, tokenPrice, targetRate, mcap, beforeSupply.sub(newSupply.toInt256Safe()), block.timestamp);
+        partRebase(STAB, mcap, false);
+        partRebase(rSTAB, mcap, true);
 
         previousMcap = mcap;
         epoch = epoch.add(1);
     }
 
-    /**
-    * @notice Calculates rebase parameters.
-    */
-    function getRebaseParams() public view returns (uint256, uint256, uint256) {
+    function getMcap() public view returns(uint256) {
         uint256 mcap;
         bool mcapValid;
         (mcap, mcapValid) = mcapOracle.getData();
         require(mcapValid, "invalid mcap");
 
+        return mcap;
+    }
+
+    /**
+    * @notice Calculates rebase parameters.
+    */
+    function getRebaseParams(uint256 mcap) public view returns (uint256, uint256) {
         uint256 tokenPrice;
         bool tokenPriceValid;
         (tokenPrice, tokenPriceValid) = tokenPriceOracle.getData();
         require(tokenPriceValid, "invalid token price");
 
-        uint256 targetRate = mcap.mul(UNIT);
-        targetRate = targetRate.div(previousMcap);
+        uint256 targetRate = mcap.mul(UNIT).div(previousMcap);
 
         if (tokenPrice > MAX_RATE) {
             tokenPrice = MAX_RATE;
         }
 
-        return (mcap, targetRate, tokenPrice);
+        return (targetRate, tokenPrice);
+    }
+
+    /**
+    * @notice Calculates rebase parameters for reverted STAB.
+    */
+    function getRevRebaseParams(uint256 mcap) public view returns (uint256, uint256) {
+        uint256 tokenPrice;
+        bool tokenPriceValid;
+        (tokenPrice, tokenPriceValid) = tokenRevPriceOracle.getData();
+        require(tokenPriceValid, "invalid token price");
+
+        uint256 targetRate = previousMcap.mul(UNIT).div(mcap);
+
+        if (tokenPrice > MAX_RATE) {
+            tokenPrice = MAX_RATE;
+        }
+
+        return (targetRate, tokenPrice);
     }
 
     /**
@@ -240,6 +283,15 @@ contract TokenMonetaryPolicy is Context, AccessControl, ChainSwap {
     function setTokenPriceOracle(IOracle tokenPriceOracle_) external onlyAdmin
     {
         tokenPriceOracle = tokenPriceOracle_;
+    }
+
+    /**
+     * @notice Sets the reference to the reverted token price oracle.
+     * @param tokenRevPriceOracle_ The address of the token price oracle contract.
+     */
+    function setRevTokenPriceOracle(IOracle tokenRevPriceOracle_) external onlyAdmin
+    {
+        tokenRevPriceOracle = tokenRevPriceOracle_;
     }
 
     /**
@@ -313,9 +365,9 @@ contract TokenMonetaryPolicy is Context, AccessControl, ChainSwap {
      * @param timeForUnlock - Maximum time for unlock on new chain, after that chain rollback without password will be possible.
      */
     function migrateToOtherChain(uint256 amount, string memory toNetwork, string memory toAddress,
-        uint256 timeForUnlock) public
+        uint256 timeForUnlock, bool reversed) public
     {
-        _migrateToOtherChain(STAB, amount, toNetwork, toAddress, timeForUnlock, epoch);
+        _migrateToOtherChain(reversed ? rSTAB : STAB, amount, toNetwork, toAddress, timeForUnlock, epoch);
     }
 
     /**
@@ -323,7 +375,7 @@ contract TokenMonetaryPolicy is Context, AccessControl, ChainSwap {
     * @param sendTo - user address on a new chain.
     * @param amount - STAB amount to send.
     */
-    function claimFromOtherChain(uint64 id, address sendTo, uint256 amount, bytes memory signature) public onlyOrchestrator {
-        _claimFromOtherChain(STAB, id, sendTo, amount, chainName, epoch, signature, whiteListedSigner);
+    function claimFromOtherChain(uint64 id, address sendTo, uint256 amount, bytes memory signature, bool reversed) public onlyOrchestrator {
+        _claimFromOtherChain(reversed ? rSTAB : STAB, id, sendTo, amount, chainName, epoch, signature, whiteListedSigner);
     }
 }

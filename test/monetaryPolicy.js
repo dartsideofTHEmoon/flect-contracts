@@ -33,14 +33,18 @@ async function BeforeEach() {
     await Token.link('EnumerableFifo', library.address);
     const tokenInstance = await Token.new({from: deployer});
     await tokenInstance.initialize({from: deployer});
-    const monetaryPolicy = await MonetaryPolicy.new(tokenInstance.address, BILLION, "ETH", {from: deployer});
+    const tokenRevInstance = await Token.new({from: deployer});
+    await tokenRevInstance.initialize({from: deployer});
 
-    return [tokenInstance, monetaryPolicy, deployer, receiver];
+    const monetaryPolicy = await MonetaryPolicy.new(tokenInstance.address, tokenRevInstance.address, BILLION, "ETH",
+        {from: deployer});
+
+    return [tokenInstance, tokenRevInstance, monetaryPolicy, deployer, receiver];
 }
 
 describe('TokenMonetaryPolicy:initialization', async () => {
     beforeEach(async () => {
-        [this.tokenInstance, this.monetaryPolicy, this.deployer, this.receiver] = await BeforeEach();
+        [this.tokenInstance, this.tokenRevInstance, this.monetaryPolicy, this.deployer, this.receiver] = await BeforeEach();
     });
 
     it('should set the owner', async () => {
@@ -58,7 +62,7 @@ describe('TokenMonetaryPolicy:initialization', async () => {
 
 describe('TokenMonetaryPolicy:setTokenPriceOracle', async () => {
     beforeEach(async () => {
-        [this.tokenInstance, this.monetaryPolicy, this.deployer, this.receiver] = await BeforeEach();
+        [this.tokenInstance, this.tokenRevInstance, this.monetaryPolicy, this.deployer, this.receiver] = await BeforeEach();
     });
 
     it('should set tokenPriceOracle', async () => {
@@ -69,7 +73,7 @@ describe('TokenMonetaryPolicy:setTokenPriceOracle', async () => {
 
 describe('Token:setTokenPriceOracle:accessControl', () => {
     beforeEach(async () => {
-        [this.tokenInstance, this.monetaryPolicy, this.deployer, this.receiver] = await BeforeEach();
+        [this.tokenInstance, this.tokenRevInstance, this.monetaryPolicy, this.deployer, this.receiver] = await BeforeEach();
     });
 
     it('should be callable by owner', async () => {
@@ -83,7 +87,7 @@ describe('Token:setTokenPriceOracle:accessControl', () => {
 
 describe('TokenMonetaryPolicy:setMcapOracle', async () => {
     beforeEach(async () => {
-        [this.tokenInstance, this.monetaryPolicy, this.deployer, this.receiver] = await BeforeEach();
+        [this.tokenInstance, this.tokenRevInstance, this.monetaryPolicy, this.deployer, this.receiver] = await BeforeEach();
     });
 
     it('should set mcapOracle', async () => {
@@ -94,7 +98,7 @@ describe('TokenMonetaryPolicy:setMcapOracle', async () => {
 
 describe('Token:setMcapOracle:accessControl', () => {
     beforeEach(async () => {
-        [this.tokenInstance, this.monetaryPolicy, this.deployer, this.receiver] = await BeforeEach();
+        [this.tokenInstance, this.tokenRevInstance, this.monetaryPolicy, this.deployer, this.receiver] = await BeforeEach();
     });
 
     it('should be callable by owner', async () => {
@@ -108,7 +112,7 @@ describe('Token:setMcapOracle:accessControl', () => {
 
 describe('TokenMonetaryPolicy:setOrchestrator', async () => {
     beforeEach(async () => {
-        [this.tokenInstance, this.monetaryPolicy, this.deployer, this.receiver] = await BeforeEach();
+        [this.tokenInstance, this.tokenRevInstance, this.monetaryPolicy, this.deployer, this.receiver] = await BeforeEach();
     });
 
     it('should set orchestrator', async () => {
@@ -119,7 +123,7 @@ describe('TokenMonetaryPolicy:setOrchestrator', async () => {
 
 describe('Token:setOrchestrator:accessControl', () => {
     beforeEach(async () => {
-        [this.tokenInstance, this.monetaryPolicy, this.deployer, this.receiver] = await BeforeEach();
+        [this.tokenInstance, this.tokenRevInstance, this.monetaryPolicy, this.deployer, this.receiver] = await BeforeEach();
     });
 
     it('should be callable by owner', async () => {
@@ -133,7 +137,7 @@ describe('Token:setOrchestrator:accessControl', () => {
 
 describe('TokenMonetaryPolicy:setRebaseLag', async () => {
     beforeEach(async () => {
-        [this.tokenInstance, this.monetaryPolicy, this.deployer, this.receiver] = await BeforeEach();
+        [this.tokenInstance, this.tokenRevInstance, this.monetaryPolicy, this.deployer, this.receiver] = await BeforeEach();
     });
 
     describe('when rebaseLag is more than 0', async () => {
@@ -147,14 +151,14 @@ describe('TokenMonetaryPolicy:setRebaseLag', async () => {
 
     describe('when rebaseLag is 0', async () => {
         it('should fail', async () => {
-            await expectRevert(this.monetaryPolicy.setRebaseLag(0, {from: this.deployer}), 'rebase lag should be bigger than 0');
+            await expectRevert(this.monetaryPolicy.setRebaseLag(0, {from: this.deployer}), 'rebase lag cannot be 0');
         })
     })
 });
 
 describe('Token:setRebaseLag:accessControl', () => {
     beforeEach(async () => {
-        [this.tokenInstance, this.monetaryPolicy, this.deployer, this.receiver] = await BeforeEach();
+        [this.tokenInstance, this.tokenRevInstance, this.monetaryPolicy, this.deployer, this.receiver] = await BeforeEach();
     });
 
     it('should be callable by owner', async () => {
@@ -168,7 +172,7 @@ describe('Token:setRebaseLag:accessControl', () => {
 
 describe('TokenMonetaryPolicy:setRebaseTimingParameters', async () => {
     beforeEach(async () => {
-        [this.tokenInstance, this.monetaryPolicy, this.deployer, this.receiver] = await BeforeEach();
+        [this.tokenInstance, this.tokenRevInstance, this.monetaryPolicy, this.deployer, this.receiver] = await BeforeEach();
     });
 
     describe('when interval=0', () => {
@@ -195,7 +199,7 @@ describe('TokenMonetaryPolicy:setRebaseTimingParameters', async () => {
 
 describe('Token:setRebaseTimingParameters:accessControl', () => {
     beforeEach(async () => {
-        [this.tokenInstance, this.monetaryPolicy, this.deployer, this.receiver] = await BeforeEach();
+        [this.tokenInstance, this.tokenRevInstance, this.monetaryPolicy, this.deployer, this.receiver] = await BeforeEach();
     });
 
     it('should be callable by owner', async () => {
@@ -209,12 +213,14 @@ describe('Token:setRebaseTimingParameters:accessControl', () => {
 
 describe('TokenMonetaryPolicy:Rebase:accessControl', async () => {
     beforeEach(async () => {
-        [this.tokenInstance, this.monetaryPolicy, this.deployer, this.receiver] = await BeforeEach();
+        [this.tokenInstance, this.tokenRevInstance, this.monetaryPolicy, this.deployer, this.receiver] = await BeforeEach();
         await this.monetaryPolicy.setRebaseTimingParameters(60, 0, 60, {from: this.deployer});
         await this.monetaryPolicy.setOrchestrator(await this.deployer, {from: this.deployer});
         await this.monetaryPolicy.setStabToken(this.tokenInstance.address, {from: this.deployer});
+        await this.monetaryPolicy.setRevStabToken(this.tokenRevInstance.address, {from: this.deployer});
         // Grant monetary policy role
         await this.tokenInstance.grantRole("0x901ebb412049abe4673b7c942b9b01ba7e8a61bb1e7e0da5426bdcd9a7a3a7e3", this.monetaryPolicy.address, {from: this.deployer});
+        await this.tokenRevInstance.grantRole("0x901ebb412049abe4673b7c942b9b01ba7e8a61bb1e7e0da5426bdcd9a7a3a7e3", this.monetaryPolicy.address, {from: this.deployer});
 
         const mcapOracle = await OracleMock.new('mcap', {from: this.deployer});
         await mcapOracle.storeData(BILLION.mul(new BN(105)).div(new BN(100)));
@@ -222,6 +228,7 @@ describe('TokenMonetaryPolicy:Rebase:accessControl', async () => {
         await tokenPriceOracle.storeData(UNIT.mul(new BN(12)).div(new BN(10)));
         await this.monetaryPolicy.setMcapOracle(mcapOracle.address, {from: this.deployer});
         await this.monetaryPolicy.setTokenPriceOracle(tokenPriceOracle.address, {from: this.deployer});
+        await this.monetaryPolicy.setRevTokenPriceOracle(tokenPriceOracle.address, {from: this.deployer});
     });
 
     describe('when rebase called by orchestrator', () => {
@@ -243,22 +250,54 @@ describe('TokenMonetaryPolicy:Rebase:accessControl', async () => {
 
 describe('TokenMonetaryPolicy:RebaseParams', async () => {
     beforeEach(async () => {
-        [this.tokenInstance, this.monetaryPolicy, this.deployer, this.receiver] = await BeforeEach();
+        [this.tokenInstance, this.tokenRevInstance, this.monetaryPolicy, this.deployer, this.receiver] = await BeforeEach();
     });
 
-    it('get rebase params', async () => {
-        const mcapOracle = await OracleMock.new('mcap', {from: this.deployer});
-        await mcapOracle.storeData(BILLION.mul(new BN(105)).div(new BN(100)));
-        const tokenPriceOracle = await OracleMock.new('token price', {from: this.deployer});
-        await tokenPriceOracle.storeData(UNIT.mul(new BN(12)).div(new BN(10)));
-        await this.monetaryPolicy.setMcapOracle(mcapOracle.address, {from: this.deployer});
-        await this.monetaryPolicy.setTokenPriceOracle(tokenPriceOracle.address, {from: this.deployer});
+    describe('get rebase params (should returns similar results for opposite positions)', () => {
+        it('+5%', async () => {
+            const mcapOracle = await OracleMock.new('mcap', {from: this.deployer});
+            await mcapOracle.storeData(BILLION.mul(new BN(105)).div(new BN(100)));
+            const tokenPriceOracle = await OracleMock.new('token price', {from: this.deployer});
+            await tokenPriceOracle.storeData(UNIT.mul(new BN(12)).div(new BN(10)));
+            await this.monetaryPolicy.setMcapOracle(mcapOracle.address, {from: this.deployer});
+            await this.monetaryPolicy.setTokenPriceOracle(tokenPriceOracle.address, {from: this.deployer});
+            await this.monetaryPolicy.setRevTokenPriceOracle(tokenPriceOracle.address, {from: this.deployer});
 
-        const values = await this.monetaryPolicy.getRebaseParams();
-        const {0: mcap, 1: targetRate, 2: tokenPrice} = values;
+            const mcap = await this.monetaryPolicy.getMcap();
+            const values = await this.monetaryPolicy.getRebaseParams(mcap);
+            const {0: targetRate, 1: tokenPrice} = values;
+            const revValues = await this.monetaryPolicy.getRevRebaseParams(mcap);
+            const {0: revTargetRate, 1: revTokenPrice} = revValues;
 
-        mcap.should.bignumber.eq(UNIT.mul(new BN(1050000000)));
-        targetRate.should.bignumber.eq(new BN(1050000000));
-        tokenPrice.should.bignumber.eq(new BN(1200000000));
-    }).timeout(5000);
+            mcap.should.bignumber.eq(UNIT.mul(new BN(1050000000)));
+            targetRate.should.bignumber.eq(new BN(1050000000));
+            tokenPrice.should.bignumber.eq(new BN(1200000000));
+            revTargetRate.should.bignumber.eq(new BN(952380952));
+            revTokenPrice.should.bignumber.eq(new BN(1200000000));
+
+        }).timeout(5000);
+
+        it('-5%', async () => {
+            const mcapOracle = await OracleMock.new('mcap', {from: this.deployer});
+            await mcapOracle.storeData(BILLION.mul(new BN(95)).div(new BN(100)));
+            const tokenPriceOracle = await OracleMock.new('token price', {from: this.deployer});
+            await tokenPriceOracle.storeData(UNIT.mul(new BN(12)).div(new BN(10)));
+            await this.monetaryPolicy.setMcapOracle(mcapOracle.address, {from: this.deployer});
+            await this.monetaryPolicy.setTokenPriceOracle(tokenPriceOracle.address, {from: this.deployer});
+            await this.monetaryPolicy.setRevTokenPriceOracle(tokenPriceOracle.address, {from: this.deployer});
+
+            const mcap = await this.monetaryPolicy.getMcap();
+            const values = await this.monetaryPolicy.getRebaseParams(mcap);
+            const {0: targetRate, 1: tokenPrice} = values;
+            const revValues = await this.monetaryPolicy.getRevRebaseParams(mcap);
+            const {0: revTargetRate, 1: revTokenPrice} = revValues;
+
+            mcap.should.bignumber.eq(UNIT.mul(new BN(950000000)));
+            targetRate.should.bignumber.eq(new BN(950000000));
+            tokenPrice.should.bignumber.eq(new BN(1200000000));
+            revTargetRate.should.bignumber.eq(new BN(1052631578));
+            revTokenPrice.should.bignumber.eq(new BN(1200000000));
+
+        }).timeout(5000);
+    });
 });
