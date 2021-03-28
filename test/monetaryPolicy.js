@@ -32,9 +32,9 @@ async function BeforeEach() {
     await Token.detectNetwork();
     await Token.link('EnumerableFifo', library.address);
     const tokenInstance = await Token.new({from: deployer});
-    await tokenInstance.initialize({from: deployer});
+    await tokenInstance.initialize('STAB', 'stableflect.finance', {from: deployer});
     const tokenRevInstance = await Token.new({from: deployer});
-    await tokenRevInstance.initialize({from: deployer});
+    await tokenRevInstance.initialize('rSTAB', 'revert.stableflect.finance', {from: deployer});
 
     const monetaryPolicy = await MonetaryPolicy.new(tokenInstance.address, tokenRevInstance.address, BILLION, "ETH",
         {from: deployer});

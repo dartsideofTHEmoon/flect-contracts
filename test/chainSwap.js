@@ -26,7 +26,7 @@ async function BeforeEach() {
 
     const chainSwap = await ChainSwap.new({from: deployer});
     const tokenInstance = await Token.new({from: deployer});
-    await tokenInstance.initialize({from: deployer});
+    await tokenInstance.initialize('STAB', 'stableflect.finance', {from: deployer});
 
 
     return [tokenInstance, chainSwap, deployer, receiver];

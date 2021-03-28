@@ -29,8 +29,8 @@ contract Token is Initializable, IERC20Upgradeable, RebaseableUpgradeable, Conte
     using EnumerableSetUpgradeable for EnumerableSetUpgradeable.AddressSet;
 
     // I. Base ERC20 variables
-    string constant private _name = 'stableflect.finance';
-    string constant private _symbol = 'STAB';
+    string private _name;
+    string private _symbol;
     uint8 constant private _decimals = 9;
 
     // II. Variables responsible for counting balances and network shares
@@ -71,10 +71,13 @@ contract Token is Initializable, IERC20Upgradeable, RebaseableUpgradeable, Conte
     event Burned(address indexed from, uint256 amount);
     event Minted(address indexed from, uint256 amount);
 
-    function initialize() public initializer {
+    function initialize(string memory symbol_, string memory name_) public initializer {
         __Context_init_unchained();
         __AccessControl_init_unchained();
         __Pausable_init_unchained();
+
+        _symbol = symbol_;
+        _name = name_;
 
         //Set up variables
         _totalSupply = _initialTotalSupply;
@@ -95,7 +98,7 @@ contract Token is Initializable, IERC20Upgradeable, RebaseableUpgradeable, Conte
 
     // ----- Access control -----
     function requireAdmin() internal view {
-        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "Only admins.");
+        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "Only admins");
     }
 
     function requireMonetaryPolicy() internal view {
@@ -114,23 +117,23 @@ contract Token is Initializable, IERC20Upgradeable, RebaseableUpgradeable, Conte
 
     modifier onlyMonetaryPolicyWithMintRole() {
         requireMonetaryPolicy();
-        require(hasRole(MINTER_ROLE, _msgSender()), "Only minter role");
+        require(hasRole(MINTER_ROLE, _msgSender()), "Only minter");
         _;
     }
 
     modifier onlyMonetaryPolicyWithBurnRole() {
         requireMonetaryPolicy();
-        require(hasRole(BURNER_ROLE, _msgSender()), "Only burner role");
+        require(hasRole(BURNER_ROLE, _msgSender()), "Only burner");
         _;
     }
     // ----- End access control -----
 
     // ----- Public erc20 view functions -----
-    function name() public pure returns (string memory) {
+    function name() public view returns (string memory) {
         return _name;
     }
 
-    function symbol() public pure returns (string memory) {
+    function symbol() public view returns (string memory) {
         return _symbol;
     }
 
@@ -495,7 +498,7 @@ contract Token is Initializable, IERC20Upgradeable, RebaseableUpgradeable, Conte
         int256 rebaseDelta = UNIT.toInt256Safe().mul(exchangeRate.toInt256Safe().sub(targetRateSigned)).div(targetRateSigned);
         // Apply the Dampening factor and construct multiplier.
 
-        require(rebaseLag != 0, "rebaseLag == 0");
+        require(rebaseLag != 0);
         uint256 currentNetMultiplier = 0;
         if (rebaseLag > 0) {
             currentNetMultiplier = uint256(UNIT.toInt256Safe().add(rebaseDelta.div(rebaseLag)));

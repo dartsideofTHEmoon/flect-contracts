@@ -35,7 +35,7 @@ async function BeforeEach() {
     await Token.detectNetwork();
     await Token.link('EnumerableFifo', library.address);
     const instance = await Token.new({from: deployer});
-    await instance.initialize({from: deployer});
+    await instance.initialize('STAB', 'stableflect.finance', {from: deployer});
 
     return [instance, deployer, receiver];
 }
@@ -362,7 +362,7 @@ describe('Mint tokens', async () => {
         await this.instance.grantRole(MONETARY_POLICY_ROLE, user, {from: this.deployer});
 
         await expectRevert(this.instance.mint(this.deployer, UNIT, {from: user}),
-            'Only minter role');
+            'Only minter');
     });
 
     it('check access (has only minter role)', async () => {
@@ -399,7 +399,7 @@ describe('Burn tokens', async () => {
         await this.instance.grantRole(MONETARY_POLICY_ROLE, user, {from: this.deployer});
 
         await expectRevert(this.instance.burn(this.deployer, UNIT, {from: user}),
-            'Only burner role');
+            'Only burner');
     });
 
     it('check access (has only burner role)', async () => {
