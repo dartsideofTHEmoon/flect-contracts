@@ -2,13 +2,32 @@ const SafeMathUpgradeable = artifacts.require("./SafeMathUpgradeable.sol");
 const SafeMathInt = artifacts.require("./SafeMathInt.sol");
 const UInt256Lib = artifacts.require("./UInt256Lib.sol");
 const EnumerableFifo = artifacts.require("./EnumerableFifo.sol");
-const AddressUpgradeable = artifacts.require("./AddressUpgradeable.sol")
-const EnumerableSetUpgradeable = artifacts.require("./EnumerableSetUpgradeable.sol")
+const AddressUpgradeable = artifacts.require("./AddressUpgradeable.sol");
+const EnumerableSetUpgradeable = artifacts.require("./EnumerableSetUpgradeable.sol");
+const ECDSA = artifacts.require("./ECDSA.sol");
 const Token = artifacts.require("./Token.sol");
+const ChainSwap = artifacts.require("./ChainSwap.sol");
+const TokenMonetaryPolicy = artifacts.require("./TokenMonetaryPolicy.sol");
 const { deployProxy } = require('@openzeppelin/truffle-upgrades');
 
+const BN = require("bn.js");
+const UNIT = new BN(1).mul(new BN(10 ** 9));
+
+function networkToChainName(network) {
+    switch (network) {
+        case "BinanceSmartChainMain":
+            return "BSC";
+        case "BinanceSmartChainTest":
+            return "TBSC";
+        default:
+            return "DEV";
+    }
+}
+
 // JavaScript export
-module.exports = async function(deployer) {
+module.exports = async function(deployer, network) {
+    console.log("Deploying to", network);
+
     // Deploy all libraries to the network
     await deployer.deploy(SafeMathUpgradeable);
     await deployer.deploy(SafeMathInt);
@@ -16,6 +35,7 @@ module.exports = async function(deployer) {
     await deployer.deploy(EnumerableFifo);
     await deployer.deploy(AddressUpgradeable);
     await deployer.deploy(EnumerableSetUpgradeable);
+    await deployer.deploy(ECDSA);
 
     await deployer.link(SafeMathUpgradeable, EnumerableFifo);
     await deployer.link(SafeMathInt, EnumerableFifo);
@@ -28,6 +48,20 @@ module.exports = async function(deployer) {
     await deployer.link(AddressUpgradeable, Token);
     await deployer.link(EnumerableSetUpgradeable, Token);
 
-    const tokenInstance = await deployProxy(Token, [], {deployer, unsafeAllowLinkedLibraries: true});
-    console.log('Token deployed', tokenInstance.address);
+    const tokenInstance = await deployProxy(Token, ['STAB', 'stableflect.finance'], {deployer, unsafeAllowLinkedLibraries: true});
+    const tokenRevInstance = await deployProxy(Token, ['rSTAB', 'revert.stableflect.finance'], {deployer, unsafeAllowLinkedLibraries: true});
+
+    // ChainSwap.sol
+    await deployer.link(SafeMathUpgradeable, ChainSwap);
+    await deployer.link(ECDSA, ChainSwap);
+    // TokenMonetaryPolicy.sol
+    await deployer.link(SafeMathUpgradeable, TokenMonetaryPolicy);
+    await deployer.link(SafeMathInt, TokenMonetaryPolicy);
+    await deployer.link(UInt256Lib, TokenMonetaryPolicy);
+
+    const monetaryPolicyInstance = await deployer.deploy(TokenMonetaryPolicy,
+        tokenInstance.address, tokenRevInstance.address, UNIT.mul(new BN(1450000)), networkToChainName(network));
+    console.log('Token STAB deployed', tokenInstance.address);
+    console.log('Token rSTAB deployed', tokenRevInstance.address);
+    console.log('Monetary Policy deployed', monetaryPolicyInstance.address);
 };
