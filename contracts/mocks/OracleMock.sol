@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 pragma solidity >=0.6.0 <0.8.0;
 
 contract OracleMock {
@@ -5,14 +6,14 @@ contract OracleMock {
     uint256 private _data;
     string public name;
 
-    constructor(string memory name_) public {
+    constructor(string memory name_) {
         name = name_;
     }
 
     // Mock methods
-    function getData() external returns (uint256, bool)
+    function getData() external view returns (uint256, bool)
     {
-//      emit FunctionCalled(name, "getData", msg.sender); // Raises exception, why?...
+//      emit FunctionCalled(name, "getData", msg.senEnumerableFifoTest.solder); // Raises exception, why?...
         return (_data, _validity);
     }
 
