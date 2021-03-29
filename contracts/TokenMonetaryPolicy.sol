@@ -9,10 +9,7 @@ import "./Token.sol";
 import "./utils/SafeMathInt.sol";
 import "./utils/UInt256Lib.sol";
 import "./ChainSwap.sol";
-
-interface IOracle {
-    function getData() external view returns (uint256, bool);
-}
+import "./IOracle.sol";
 
 /**
  * @title StabToken Monetary Supply Policy
@@ -115,6 +112,13 @@ contract TokenMonetaryPolicy is Context, AccessControl, ChainSwap {
         _setupRole(ORCHESTRATOR_ROLE, _msgSender());
         whiteListedSigner = address(_msgSender());
         chainName = chainName_;
+
+        STAB.grantRole(STAB.MONETARY_POLICY_ROLE(), address(this));
+        STAB.grantRole(STAB.MINTER_ROLE(), address(this));
+        STAB.grantRole(STAB.BURNER_ROLE(), address(this));
+        rSTAB.grantRole(STAB.MONETARY_POLICY_ROLE(), address(this));
+        rSTAB.grantRole(STAB.MINTER_ROLE(), address(this));
+        rSTAB.grantRole(STAB.BURNER_ROLE(), address(this));
 
         // amount * _feeMultiplier / _feeDivisor;
         _feeMultiplier = 1;
