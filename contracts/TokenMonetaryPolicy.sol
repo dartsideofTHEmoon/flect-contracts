@@ -113,13 +113,6 @@ contract TokenMonetaryPolicy is Context, AccessControl, ChainSwap {
         whiteListedSigner = address(_msgSender());
         chainName = chainName_;
 
-        STAB.grantRole(STAB.MONETARY_POLICY_ROLE(), address(this));
-        STAB.grantRole(STAB.MINTER_ROLE(), address(this));
-        STAB.grantRole(STAB.BURNER_ROLE(), address(this));
-        rSTAB.grantRole(STAB.MONETARY_POLICY_ROLE(), address(this));
-        rSTAB.grantRole(STAB.MINTER_ROLE(), address(this));
-        rSTAB.grantRole(STAB.BURNER_ROLE(), address(this));
-
         // amount * _feeMultiplier / _feeDivisor;
         _feeMultiplier = 1;
         _feeDivisor = 1;

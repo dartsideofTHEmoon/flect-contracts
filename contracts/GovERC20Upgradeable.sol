@@ -43,7 +43,7 @@ contract GovERC20Upgradeable is Initializable, ContextUpgradeable, IERC20Upgrade
 
     string private _name;
     string private _symbol;
-    uint8 private _decimals;
+    uint8 internal _decimals;
 
     /**
      * @dev Sets the values for {name} and {symbol}, initializes {decimals} with

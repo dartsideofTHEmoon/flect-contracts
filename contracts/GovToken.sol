@@ -24,20 +24,20 @@ contract GovToken is Initializable, GovERC20Upgradeable, AccessControlUpgradeabl
     IOracle public govTokenPriceOracle;
 
     // Keeps a list of tokens which are mintable for 1$ worth of gSTAB.
-    mapping(address => bool) private _allowedTokens;
-    EnumerableSetUpgradeable.AddressSet private _stabTokens;
-    uint256 private _totalSupplyEpoch;
-    uint256 private _tokensTotalSupply;
+    mapping(address => bool) internal _allowedTokens;
+    EnumerableSetUpgradeable.AddressSet internal _stabTokens;
+    uint256 internal _totalSupplyEpoch;
+    uint256 internal _tokensTotalSupply;
 
     // Set monetary policy.
-    TokenMonetaryPolicy private _monetaryPolicy;
+    TokenMonetaryPolicy internal _monetaryPolicy;
 
-    function initialize() public initializer {
+    function initialize(address monetaryPolicy_, address[] memory tokens) public initializer {
         __Context_init_unchained();
         __AccessControl_init_unchained();
         __ERC20_init_unchained("gov.stableflect.finance", "gSTAB");
 
-        UNIT = 10 ** 9;
+        UNIT = 10 ** _decimals;
         _tokensTotalSupply = 0;
         _totalSupplyEpoch = 0;
 
@@ -45,6 +45,12 @@ contract GovToken is Initializable, GovERC20Upgradeable, AccessControlUpgradeabl
         _mint(owner, UNIT.mul(100000000)); // 100 mln tokens.
         _setupRole(DEFAULT_ADMIN_ROLE, owner);
 
+        _monetaryPolicy = TokenMonetaryPolicy(monetaryPolicy_);
+        for (uint256 i = 0; i < tokens.length; i++) {
+            _allowedTokens[tokens[i]] = true;
+            _stabTokens.add(tokens[i]);
+        }
+        updateTotalSupply(true);
         setFeeParams(995, 1000); // 0.5% fee.
     }
 
