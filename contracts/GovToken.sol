@@ -4,17 +4,20 @@ pragma solidity >=0.6.0 <0.8.0;
 
 import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/EnumerableSetUpgradeable.sol";
 
 import "./Token.sol";
 import "./GovERC20Upgradeable.sol";
 import "./IOracle.sol";
+import "./TokenMonetaryPolicy.sol";
 
 contract GovToken is Initializable, GovERC20Upgradeable, AccessControlUpgradeable {
     using SafeMathUpgradeable for uint256;
+    using EnumerableSetUpgradeable for EnumerableSetUpgradeable.AddressSet;
 
     uint256 private UNIT; // = 10 ** _decimals
-    uint256 internal _feeMultiplier;
-    uint256 internal _feeDivisor;
+    uint256 private _feeMultiplier;
+    uint256 private _feeDivisor;
 
     // Market oracle provides the gSTAB/USD exchange rate as an 18 decimal fixed point number.
     // (eg) An oracle value of 1.5e9 it would mean 1 gSTAB is trading for $1.50.
@@ -22,6 +25,12 @@ contract GovToken is Initializable, GovERC20Upgradeable, AccessControlUpgradeabl
 
     // Keeps a list of tokens which are mintable for 1$ worth of gSTAB.
     mapping(address => bool) private _allowedTokens;
+    EnumerableSetUpgradeable.AddressSet private _stabTokens;
+    uint256 private _totalSupplyEpoch;
+    uint256 private _tokensTotalSupply;
+
+    // Set monetary policy.
+    TokenMonetaryPolicy private _monetaryPolicy;
 
     function initialize() public initializer {
         __Context_init_unchained();
@@ -29,6 +38,8 @@ contract GovToken is Initializable, GovERC20Upgradeable, AccessControlUpgradeabl
         __ERC20_init_unchained("gov.stableflect.finance", "gSTAB");
 
         UNIT = 10 ** 9;
+        _tokensTotalSupply = 0;
+        _totalSupplyEpoch = 0;
 
         address owner = _msgSender();
         _mint(owner, UNIT.mul(100000000)); // 100 mln tokens.
@@ -49,6 +60,8 @@ contract GovToken is Initializable, GovERC20Upgradeable, AccessControlUpgradeabl
         require(_allowedTokens[token] == false, "This token is already governed.");
         require(address(0) != token, "Cannot add a zero address.");
         _allowedTokens[token] = true;
+        _stabTokens.add(token);
+        updateTotalSupply(true);
     }
 
     /**
@@ -57,6 +70,8 @@ contract GovToken is Initializable, GovERC20Upgradeable, AccessControlUpgradeabl
     function removeTokenAddresses(address token) public onlyAdmin {
         require(_allowedTokens[token], "This token is not governed yet.");
         delete _allowedTokens[token];
+        _stabTokens.remove(token);
+        updateTotalSupply(true);
     }
 
     /**
@@ -80,6 +95,15 @@ contract GovToken is Initializable, GovERC20Upgradeable, AccessControlUpgradeabl
     }
 
     /**
+    * @notice Sets monetary policy contract. It is required to get current epoch.
+    */
+    function setTokenMonetaryPolicy(address monetaryPolicy_) public onlyAdmin
+    {
+        _monetaryPolicy = TokenMonetaryPolicy(monetaryPolicy_);
+        updateTotalSupply(true);
+    }
+
+    /**
     * @notice Fetches gSTAB price from oracle.
     */
     function getGovPrice() internal view returns (uint256) {
@@ -98,9 +122,33 @@ contract GovToken is Initializable, GovERC20Upgradeable, AccessControlUpgradeabl
         return beforeFee.mul(_feeMultiplier).div(_feeDivisor);
     }
 
+    /**
+    * @notice Applies fee to send amount. The bigger fee, the shorter time to rebase left.
+    */
     function applyRebaseAwareFee(uint256 beforeFee) internal view returns(uint256) {
         // TODO get amount of time left to rebase window and apply fee.
         return beforeFee;
+    }
+
+    /**
+    * @notice Updates total supply if required.
+    */
+    function updateTotalSupply(bool force) internal {
+        if (force || _monetaryPolicy.epoch() != _totalSupplyEpoch) {
+            _tokensTotalSupply = sumTotalSupplyOfTokens();
+            _totalSupplyEpoch = _monetaryPolicy.epoch();
+        }
+    }
+
+    /**
+    * @notice Calculates total supply of all allowed STAB tokens.
+    */
+    function sumTotalSupplyOfTokens() internal view returns(uint256) {
+        uint256 totalSupply = 0;
+        for (uint256 i = 0; i < _stabTokens.length(); i++) {
+            totalSupply = totalSupply.add(Token(_stabTokens.at(i)).totalSupply());
+        }
+        return totalSupply;
     }
 
     /**
@@ -113,8 +161,11 @@ contract GovToken is Initializable, GovERC20Upgradeable, AccessControlUpgradeabl
         _burn(sender, govAmount); // Simulate transfer + burn in one step, but check allowance as for normal transfer.
         decreaseAllowance(address(this), govAmount);
 
+        updateTotalSupply(false);
+
         uint256 govPrice = getGovPrice();
         uint256 stabAmount = govAmount.mul(govPrice).div(UNIT); // Always treat STAB as 1$.
+        stabAmount = stabAmount.mul(totalSupply()).div(_tokensTotalSupply); // but scale the price by all STAB's total supply : gov total supply
         token.mint(sender, applyFee(stabAmount));
     }
 
@@ -127,8 +178,11 @@ contract GovToken is Initializable, GovERC20Upgradeable, AccessControlUpgradeabl
         token.transferFrom(_msgSender(), address(this), stabAmount);
         token.burnMyTokens(stabAmount);
 
+        updateTotalSupply(false);
+
         uint256 govPrice = getGovPrice();
         uint256 govAmount = stabAmount.mul(UNIT).div(govPrice); // Always treat STAB as 1$.
+        govAmount = govAmount.mul(_tokensTotalSupply).div(totalSupply());  // but scale the price by all STAB's total supply : gov total supply
         _mint(_msgSender(), applyFee(govAmount));
     }
 
