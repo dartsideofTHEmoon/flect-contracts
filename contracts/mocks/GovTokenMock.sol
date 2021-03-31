@@ -7,15 +7,19 @@ import "../TokenMonetaryPolicy.sol";
 
 contract GovTokenMock is GovToken {
 
-    function getTotalSupplyEpochMock() public returns (uint256) {
+    function getTotalSupplyEpochMock() public view returns (uint256) {
         return _totalSupplyEpoch;
     }
 
-    function getTokensTotalSupplyMock() public returns (uint256) {
+    function getTokensTotalSupplyMock() public view returns (uint256) {
         return _tokensTotalSupply;
     }
 
-    function getMonetaryPolicyMock() public returns (TokenMonetaryPolicy) {
+    function getMonetaryPolicyMock() public view returns (TokenMonetaryPolicy) {
         return _monetaryPolicy;
+    }
+
+    function getFeeParamsMock() public view returns(uint256, uint256) {
+        return (_feeMultiplier, _feeDivisor);
     }
 }

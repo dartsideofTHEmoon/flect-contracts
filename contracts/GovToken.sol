@@ -16,8 +16,8 @@ contract GovToken is Initializable, GovERC20Upgradeable, AccessControlUpgradeabl
     using EnumerableSetUpgradeable for EnumerableSetUpgradeable.AddressSet;
 
     uint256 private UNIT; // = 10 ** _decimals
-    uint256 private _feeMultiplier;
-    uint256 private _feeDivisor;
+    uint256 internal _feeMultiplier;
+    uint256 internal _feeDivisor;
 
     // Market oracle provides the gSTAB/USD exchange rate as an 18 decimal fixed point number.
     // (eg) An oracle value of 1.5e9 it would mean 1 gSTAB is trading for $1.50.
@@ -163,16 +163,19 @@ contract GovToken is Initializable, GovERC20Upgradeable, AccessControlUpgradeabl
     function mintStabForGov(Token token, uint256 govAmount) public {
         require(_allowedTokens[address(token)], "Token is not governed by this contract.");
 
+        uint256 startSupply = totalSupply();
         address sender = _msgSender();
         _burn(sender, govAmount); // Simulate transfer + burn in one step, but check allowance as for normal transfer.
         decreaseAllowance(address(this), govAmount);
 
         updateTotalSupply(false);
 
-        uint256 govPrice = getGovPrice();
-        uint256 stabAmount = govAmount.mul(govPrice).div(UNIT); // Always treat STAB as 1$.
-        stabAmount = stabAmount.mul(totalSupply()).div(_tokensTotalSupply); // but scale the price by all STAB's total supply : gov total supply
+        uint256 govValue = govAmount.mul(getGovPrice());
+        uint256 stabRarity = startSupply.mul(UNIT).div(_tokensTotalSupply); // rarity parameter. When rarity > UNIT less STAB exists than gSTAB.
+        uint256 stabAmount = govValue.div(stabRarity);
+
         token.mint(sender, applyFee(stabAmount));
+        updateTotalSupply(true); // update token total supply as mint changes it.
     }
 
     /**
@@ -181,15 +184,19 @@ contract GovToken is Initializable, GovERC20Upgradeable, AccessControlUpgradeabl
     function mintGovForStab(Token token, uint256 stabAmount) public {
         require(_allowedTokens[address(token)], "Token is not governed by this contract.");
 
+        updateTotalSupply(false);
+
         token.transferFrom(_msgSender(), address(this), stabAmount);
         token.burnMyTokens(stabAmount);
 
         updateTotalSupply(false);
 
-        uint256 govPrice = getGovPrice();
-        uint256 govAmount = stabAmount.mul(UNIT).div(govPrice); // Always treat STAB as 1$.
-        govAmount = govAmount.mul(_tokensTotalSupply).div(totalSupply());  // but scale the price by all STAB's total supply : gov total supply
+        uint256 stabRarity = totalSupply().mul(UNIT).div(_tokensTotalSupply); // rarity parameter. When rarity > UNIT less STAB exists than gSTAB.
+        uint256 stabValue = stabAmount.mul(stabRarity);
+        uint256 govAmount = stabValue.div(getGovPrice());
+
         _mint(_msgSender(), applyFee(govAmount));
+        updateTotalSupply(true);
     }
 
     /**

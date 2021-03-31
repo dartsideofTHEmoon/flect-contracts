@@ -61,6 +61,14 @@ module.exports = async function(deployer, network) {
 
     const monetaryPolicyInstance = await deployer.deploy(TokenMonetaryPolicy,
         tokenInstance.address, tokenRevInstance.address, UNIT.mul(new BN(1450000)), networkToChainName(network));
+
+    await tokenInstance.grantRole(Token.MONETARY_POLICY_ROLE(), monetaryPolicyInstance.address);
+    await tokenInstance.grantRole(Token.MINTER_ROLE(), monetaryPolicyInstance.address);
+    await tokenInstance.grantRole(Token.BURNER_ROLE(), monetaryPolicyInstance.address);
+    await tokenRevInstance.grantRole(Token.MONETARY_POLICY_ROLE(), monetaryPolicyInstance.address);
+    await tokenRevInstance.grantRole(Token.MINTER_ROLE(), monetaryPolicyInstance.address);
+    await tokenRevInstance.grantRole(Token.BURNER_ROLE(), monetaryPolicyInstance.address);
+
     console.log('Token STAB deployed', tokenInstance.address);
     console.log('Token rSTAB deployed', tokenRevInstance.address);
     console.log('Monetary Policy deployed', monetaryPolicyInstance.address);

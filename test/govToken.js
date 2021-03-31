@@ -8,6 +8,7 @@ const Token = contract.fromArtifact("Token");
 const EnumerableFifo = contract.fromArtifact("EnumerableFifo");
 const EnumerableSetUpgradeable = contract.fromArtifact("EnumerableSetUpgradeable");
 const MonetaryPolicy = contract.fromArtifact("TokenMonetaryPolicy");
+const OracleMock = contract.fromArtifact("OracleMock");
 
 require('chai').should();
 require('chai')
@@ -75,7 +76,7 @@ describe('Initialization', async () => {
         [this.govInstance, this.tokenInstance, this.tokenRevInstance, this.deployer, this.receiver] = await BeforeEach();
     });
 
-    describe('addTokenAddresses', async() => {
+    describe('addTokenAddresses', async () => {
         it('only admin', async () => {
             await expectRevert(this.govInstance.addTokenAddresses(this.receiver, {from: this.receiver}), 'Only admins.');
         });
@@ -99,7 +100,7 @@ describe('Initialization', async () => {
         });
     });
 
-    describe('removeTokenAddresses', async() => {
+    describe('removeTokenAddresses', async () => {
         it('only admin', async () => {
             await expectRevert(this.govInstance.removeTokenAddresses(this.receiver, {from: this.receiver}), 'Only admins.');
         });
@@ -120,37 +121,91 @@ describe('Initialization', async () => {
         });
     });
 
-    describe('setTokenPriceOracle', async() => {
+    describe('setTokenPriceOracle', async () => {
         it('only admin', async () => {
             await expectRevert(this.govInstance.setTokenPriceOracle(this.receiver, {from: this.receiver}), 'Only admins.');
         });
     });
 
-    describe('setFeeParams', async() => {
+    describe('setFeeParams', async () => {
         it('only admin', async () => {
             await expectRevert(this.govInstance.setFeeParams(100, 110, {from: this.receiver}), 'Only admins.');
         });
+
+        it('success', async () => {
+            await this.govInstance.setFeeParams(112, 155, {from: this.deployer});
+
+            const {0: feeMultiplier, 1: feeDivisor} = await this.govInstance.getFeeParamsMock.call();
+
+            feeMultiplier.should.bignumber.eq(new BN(112));
+            feeDivisor.should.bignumber.eq(new BN(155));
+        });
     });
 
-    describe('setTokenMonetaryPolicy', async() => {
+    describe('setTokenMonetaryPolicy', async () => {
         it('only admin', async () => {
             await expectRevert(this.govInstance.setTokenMonetaryPolicy(this.receiver, {from: this.receiver}), 'Only admins.');
         });
     });
 
-    describe('mintStabForGov', async() => {
+    describe('mintStabForGov', async () => {
         it('only whitelisted', async () => {
             await expectRevert(this.govInstance.mintStabForGov(this.tokenInstance.address, 1000, {from: this.receiver}), 'Token is not governed by this contract.');
         });
-    });
 
-    describe('mintGovForStab', async() => {
-        it('only whitelisted', async () => {
-            await expectRevert(this.govInstance.mintGovForStab(this.tokenInstance.address, 1000, {from: this.receiver}), 'Token is not governed by this contract.');
+        it('missing allowance', async () => {
+            await this.govInstance.addTokenAddresses(this.tokenInstance.address, {from: this.deployer});
+            await expectRevert(this.govInstance.mintStabForGov(this.tokenInstance.address, 1000, {from: this.deployer}), 'ERC20: decreased allowance below zero.');
+        });
+
+        it('success', async () => {
+            await this.govInstance.increaseAllowance(this.govInstance.address, 1000, {from: this.deployer});
+            await this.govInstance.addTokenAddresses(this.tokenInstance.address, {from: this.deployer});
+            const govPriceOracle = await OracleMock.new('govPrice');
+            await govPriceOracle.storeData(UNIT.mul(new BN(8))); // 8USD = 1GOV.
+            await this.govInstance.setTokenPriceOracle(govPriceOracle.address, {from: this.deployer});
+            (await this.govInstance.getTokensTotalSupplyMock.call()).should.bignumber.eq(UNIT.mul(new BN(5000000)));
+            (await this.govInstance.totalSupply.call()).should.bignumber.eq(UNIT.mul(new BN(100000000)));
+
+            // gSTAB total supply == 100mln, STAB total supply = 5mln, so rarity is on STAB side (20x),
+            // but price of gSTAB = 8USD, and we treat STAB as 1USD * rarity.
+            // Finally exchanges 1000 gSTAB for 400 STAB * 0.995 (fee).
+            await this.govInstance.mintStabForGov(this.tokenInstance.address, 1000, {from: this.deployer});
+            (await this.govInstance.getTokensTotalSupplyMock.call()).should.bignumber.eq(UNIT.mul(new BN(5000000)).add(new BN(398)));
+            (await this.govInstance.totalSupply.call()).should.bignumber.eq(UNIT.mul(new BN(100000000)).sub(new BN(1000)));
         });
     });
 
-    describe('exchangeStabForStab', async() => {
+    describe('mintGovForStab', async () => {
+        it('only whitelisted', async () => {
+            await expectRevert(this.govInstance.mintGovForStab(this.tokenInstance.address, 1000, {from: this.receiver}), 'Token is not governed by this contract.');
+        });
+
+        it('missing allowance', async () => {
+            await this.govInstance.addTokenAddresses(this.tokenInstance.address, {from: this.deployer});
+            await expectRevert(this.govInstance.mintGovForStab(this.tokenInstance.address, 1000, {from: this.deployer}), 'Exceeds allowance.');
+        });
+
+        it('success', async () => {
+            await this.tokenInstance.transfer(this.govInstance.address, 10000, {from: this.deployer});
+            await this.tokenInstance.increaseAllowance(this.govInstance.address, 1000, {from: this.deployer});
+            await this.govInstance.addTokenAddresses(this.tokenInstance.address, {from: this.deployer});
+            const govPriceOracle = await OracleMock.new('govPrice');
+            await govPriceOracle.storeData(UNIT.mul(new BN(8))); // 8USD = 1GOV.
+            await this.govInstance.setTokenPriceOracle(govPriceOracle.address, {from: this.deployer});
+            (await this.govInstance.getTokensTotalSupplyMock.call()).should.bignumber.eq(UNIT.mul(new BN(5000000)));
+            (await this.govInstance.totalSupply.call()).should.bignumber.eq(UNIT.mul(new BN(100000000)));
+
+            // gSTAB total supply == 100mln, STAB total supply = 5mln, so rarity is on STAB side (20x),
+            // but price of gSTAB = 8USD, and we treat STAB as 1USD * rarity.
+            // Finally exchanges 1000 STAB for 400 gSTAB * 0.995 (fee).
+            await this.govInstance.mintGovForStab(this.tokenInstance.address, 400, {from: this.deployer});
+            (await this.govInstance.getTokensTotalSupplyMock.call()).should.bignumber.eq(UNIT.mul(new BN(5000000)).sub(new BN(400)));
+            (await this.govInstance.totalSupply.call()).should.bignumber.eq(UNIT.mul(new BN(100000000)).add(new BN(995)));
+        });
+    });
+
+    describe('exchangeStabForStab', async () => {
         it('from not whitelisted', async () => {
             await this.govInstance.addTokenAddresses(this.tokenInstance.address, {from: this.deployer});
             await expectRevert(this.govInstance.exchangeStabForStab(this.tokenRevInstance.address, this.tokenInstance.address, 1), '\'from\' token is not governed by this contract.');
