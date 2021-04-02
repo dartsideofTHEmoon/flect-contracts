@@ -355,6 +355,16 @@ contract TokenMonetaryPolicy is Context, AccessControl, ChainSwap {
     }
 
     /**
+    * @return Amount of time left to next rebase window.
+    */
+    function getTimeLeftToRebaseWindow() public view returns (uint256) {
+        if (rebaseWindowOffsetSec <= block.timestamp.mod(minRebaseTimeIntervalSec)) {
+            return 0; // in rebase window already;
+        }
+        return rebaseWindowOffsetSec.sub(block.timestamp.mod(minRebaseTimeIntervalSec));
+    }
+
+    /**
      * @notice First stage - creates migration request.
      It might be required to allow monetary policy to make transfer of particular amount of tokens before this call.
      * @param amount - Value of transfer to other chain.

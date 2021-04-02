@@ -15,11 +15,12 @@ contract GovTokenMock is GovToken {
         return _tokensTotalSupply;
     }
 
-    function getMonetaryPolicyMock() public view returns (TokenMonetaryPolicy) {
-        return _monetaryPolicy;
+    function getMainMonetaryPolicyMock() public view returns (TokenMonetaryPolicy) {
+        return _mainMonetaryPolicy;
     }
 
-    function getFeeParamsMock() public view returns(uint256, uint256) {
-        return (_feeMultiplier, _feeDivisor);
+    function getFeeParamsMock() public view returns(uint256, uint256, uint256, uint256, uint256, uint256, uint256) {
+        return (_standardFeeMultiplier, _multiplier6hr, _multiplier1hr, _multiplier10m, _multiplier2m,
+                _multiplierMadness, _feeDivisor);
     }
 }

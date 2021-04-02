@@ -16,7 +16,12 @@ contract GovToken is Initializable, GovERC20Upgradeable, AccessControlUpgradeabl
     using EnumerableSetUpgradeable for EnumerableSetUpgradeable.AddressSet;
 
     uint256 private UNIT; // = 10 ** _decimals
-    uint256 internal _feeMultiplier;
+    uint256 internal _standardFeeMultiplier;
+    uint256 internal _multiplier6hr;
+    uint256 internal _multiplier1hr;
+    uint256 internal _multiplier10m;
+    uint256 internal _multiplier2m;
+    uint256 internal _multiplierMadness;
     uint256 internal _feeDivisor;
 
     // Market oracle provides the gSTAB/USD exchange rate as an 18 decimal fixed point number.
@@ -26,13 +31,12 @@ contract GovToken is Initializable, GovERC20Upgradeable, AccessControlUpgradeabl
     // Keeps a list of tokens which are mintable for 1$ worth of gSTAB.
     mapping(address => bool) internal _allowedTokens;
     EnumerableSetUpgradeable.AddressSet internal _stabTokens;
-    uint256 internal _totalSupplyEpoch;
+    mapping(address => TokenMonetaryPolicy) internal _allowedTokenToMonetaryPolicy;
+    TokenMonetaryPolicy internal _mainMonetaryPolicy; // used only to keep track of epoch.
+    uint256 internal _totalSupplyEpoch; // epoch in 'main' monetary policy.
     uint256 internal _tokensTotalSupply;
 
-    // Set monetary policy.
-    TokenMonetaryPolicy internal _monetaryPolicy;
-
-    function initialize(address monetaryPolicy_, address[] memory tokens) public initializer {
+    function initialize(address monetaryPolicy, address[] memory tokens) public initializer {
         __Context_init_unchained();
         __AccessControl_init_unchained();
         __ERC20_init_unchained("gov.stableflect.finance", "gSTAB");
@@ -45,13 +49,14 @@ contract GovToken is Initializable, GovERC20Upgradeable, AccessControlUpgradeabl
         _mint(owner, UNIT.mul(100000000)); // 100 mln tokens.
         _setupRole(DEFAULT_ADMIN_ROLE, owner);
 
-        _monetaryPolicy = TokenMonetaryPolicy(monetaryPolicy_);
         for (uint256 i = 0; i < tokens.length; i++) {
             _allowedTokens[tokens[i]] = true;
             _stabTokens.add(tokens[i]);
+            _allowedTokenToMonetaryPolicy[tokens[i]] = TokenMonetaryPolicy(monetaryPolicy);
         }
+        _mainMonetaryPolicy = TokenMonetaryPolicy(monetaryPolicy);
         updateTotalSupply(true);
-        setFeeParams(995, 1000); // 0.5% fee.
+        setFeeParams(997, 990, 980, 950, 850, 667, 1000); // standard = 0.3% / 6hrs+ = 1% / 1hr+ 2% / 10min+ = 5% / 2min+ = 15% / madness = 33% fee.
     }
 
     modifier onlyAdmin() {
@@ -62,12 +67,13 @@ contract GovToken is Initializable, GovERC20Upgradeable, AccessControlUpgradeabl
     /**
      * @dev Add STAB tokens which can be claimed for 1$ worth of gSTAB.
      */
-    function addTokenAddresses(address token) public onlyAdmin {
+    function addTokenAddresses(address token, TokenMonetaryPolicy monetaryPolicy) public onlyAdmin {
         require(_allowedTokens[token] == false, "This token is already governed.");
         require(address(0) != token, "Cannot add a zero address.");
         _allowedTokens[token] = true;
         _stabTokens.add(token);
         updateTotalSupply(true);
+        _allowedTokenToMonetaryPolicy[token] = monetaryPolicy;
     }
 
     /**
@@ -78,6 +84,7 @@ contract GovToken is Initializable, GovERC20Upgradeable, AccessControlUpgradeabl
         delete _allowedTokens[token];
         _stabTokens.remove(token);
         updateTotalSupply(true);
+        delete _allowedTokenToMonetaryPolicy[token];
     }
 
     /**
@@ -92,20 +99,40 @@ contract GovToken is Initializable, GovERC20Upgradeable, AccessControlUpgradeabl
     /**
     * @notice Change fee paid when exchanges (r)STAB <-> gSTAB.
     */
-    function setFeeParams(uint256 multiplier, uint256 divisor) public onlyAdmin
+    function setFeeParams(uint256 standardMultiplier, uint256 multiplier6hr, uint256 multiplier1hr,
+        uint256 multiplier10m, uint256 multiplier2m, uint256 multiplierMadness, uint256 divisor) public onlyAdmin
     {
-        require(multiplier <= divisor, "'multiplier' shouldn't be higher than 'divisor'");
+        require(standardMultiplier <= divisor, "'multiplier' shouldn't be higher than 'divisor'");
+        require(standardMultiplier >= multiplier6hr, "'multiplier6hr' shouldn't be higher than 'standardMultiplier'");
+        require(multiplier6hr >= multiplier1hr, "'multiplier1hr' shouldn't be higher than 'multiplier6hr'");
+        require(multiplier1hr >= multiplier10m, "'multiplier10m' shouldn't be higher than 'multiplier1hr'");
+        require(multiplier10m >= multiplier2m, "'multiplier2min' shouldn't be higher than 'multiplier10m'");
+        require(multiplier2m >= multiplierMadness, "'multiplierMadness' shouldn't be higher than 'multiplier2m'");
 
-        _feeMultiplier = multiplier;
+        _standardFeeMultiplier = standardMultiplier;
+        _multiplier6hr = multiplier6hr;
+        _multiplier1hr = multiplier1hr;
+        _multiplier10m = multiplier10m;
+        _multiplier2m = multiplier2m;
+        _multiplierMadness = multiplierMadness;
         _feeDivisor = divisor;
     }
 
     /**
-    * @notice Sets monetary policy contract. It is required to get current epoch.
+    * @notice Sets main monetary policy contract. It is required to get current epoch.
     */
-    function setTokenMonetaryPolicy(address monetaryPolicy_) public onlyAdmin
+    function setMainMonetaryPolicy(address monetaryPolicy) public onlyAdmin
     {
-        _monetaryPolicy = TokenMonetaryPolicy(monetaryPolicy_);
+        _mainMonetaryPolicy = TokenMonetaryPolicy(monetaryPolicy);
+        updateTotalSupply(true);
+    }
+
+    /**
+    * @notice Sets monetary policy contract for a token.
+    */
+    function setTokenMonetaryPolicy(address token, address monetaryPolicy) public onlyAdmin
+    {
+        _allowedTokenToMonetaryPolicy[token] = TokenMonetaryPolicy(monetaryPolicy);
         updateTotalSupply(true);
     }
 
@@ -125,24 +152,38 @@ contract GovToken is Initializable, GovERC20Upgradeable, AccessControlUpgradeabl
     * @notice Applies fee to send amount.
     */
     function applyFee(uint256 beforeFee) internal view returns (uint256) {
-        return beforeFee.mul(_feeMultiplier).div(_feeDivisor);
+        return beforeFee.mul(_standardFeeMultiplier).div(_feeDivisor);
     }
 
     /**
     * @notice Applies fee to send amount. The bigger fee, the shorter time to rebase left.
     */
-    function applyRebaseAwareFee(uint256 beforeFee) internal view returns(uint256) {
-        // TODO get amount of time left to rebase window and apply fee.
-        return beforeFee;
+    function applyRebaseAwareFee(uint256 beforeFee, uint256 timeLeft) internal view returns(uint256) {
+        require(timeLeft != 0, "Cannot exchange tokens in 'to' token rebase window.");
+
+        if (timeLeft >= 43200) { // left more than 12hrs to next rebase window.
+            return applyFee(beforeFee); // standard fee
+        } else if (timeLeft >= 21600) {  // more than 6hrs
+            return beforeFee.mul(_multiplier6hr).div(_feeDivisor);
+        } else if (timeLeft >= 3600) { // more than 1 hr
+            return beforeFee.mul(_multiplier1hr).div(_feeDivisor);
+        } else if (timeLeft >= 600) { // more than 10 min
+            return beforeFee.mul(_multiplier10m).div(_feeDivisor);
+        } else if (timeLeft >= 120) { // more than 2 min
+            return beforeFee.mul(_multiplier2m).div(_feeDivisor);
+        }
+        // less than 2 min!
+        return beforeFee.mul(_multiplierMadness).div(_feeDivisor);
     }
 
     /**
     * @notice Updates total supply if required.
     */
     function updateTotalSupply(bool force) internal {
-        if (force || _monetaryPolicy.epoch() != _totalSupplyEpoch) {
+        uint256 epoch = _mainMonetaryPolicy.epoch();
+        if (force || epoch != _totalSupplyEpoch) {
             _tokensTotalSupply = sumTotalSupplyOfTokens();
-            _totalSupplyEpoch = _monetaryPolicy.epoch();
+            _totalSupplyEpoch = epoch;
         }
     }
 
@@ -174,7 +215,7 @@ contract GovToken is Initializable, GovERC20Upgradeable, AccessControlUpgradeabl
         uint256 stabRarity = startSupply.mul(UNIT).div(_tokensTotalSupply); // rarity parameter. When rarity > UNIT less STAB exists than gSTAB.
         uint256 stabAmount = govValue.div(stabRarity);
 
-        token.mint(sender, applyFee(stabAmount));
+        token.mint(sender, applyFee(stabAmount)); // fee is burned (not minted) in that case.
         updateTotalSupply(true); // update token total supply as mint changes it.
     }
 
@@ -189,13 +230,11 @@ contract GovToken is Initializable, GovERC20Upgradeable, AccessControlUpgradeabl
         token.transferFrom(_msgSender(), address(this), stabAmount);
         token.burnMyTokens(stabAmount);
 
-        updateTotalSupply(false);
-
         uint256 stabRarity = totalSupply().mul(UNIT).div(_tokensTotalSupply); // rarity parameter. When rarity > UNIT less STAB exists than gSTAB.
         uint256 stabValue = stabAmount.mul(stabRarity);
         uint256 govAmount = stabValue.div(getGovPrice());
 
-        _mint(_msgSender(), applyFee(govAmount));
+        _mint(_msgSender(), applyFee(govAmount)); // fee is burned (not minted) in that case.
         updateTotalSupply(true);
     }
 
@@ -206,9 +245,12 @@ contract GovToken is Initializable, GovERC20Upgradeable, AccessControlUpgradeabl
         require(_allowedTokens[address(fromStab)], "'from' token is not governed by this contract.");
         require(_allowedTokens[address(toStab)], "'to' token is not governed by this contract.");
 
-        fromStab.transferFrom(_msgSender(), address(this), fromAmount);
-        fromStab.burnMyTokens(fromAmount);
+        uint256 timeLeft = _allowedTokenToMonetaryPolicy[address(toStab)].getTimeLeftToRebaseWindow();
+        uint256 afterFee = applyRebaseAwareFee(fromAmount, timeLeft);
 
-        toStab.mint(_msgSender(), applyRebaseAwareFee(fromAmount));
+        fromStab.transferFrom(_msgSender(), address(this), fromAmount);
+        fromStab.burnMyTokens(afterFee); // keeps fee.
+
+        toStab.mint(_msgSender(), afterFee);
     }
 }

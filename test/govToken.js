@@ -1,6 +1,6 @@
 const BN = require("bn.js");
 const {accounts, contract} = require('@openzeppelin/test-environment');
-const {expectEvent, expectRevert} = require('@openzeppelin/test-helpers');
+const {expectEvent, expectRevert, time} = require('@openzeppelin/test-helpers');
 const {expect} = require('chai');
 
 const GovToken = contract.fromArtifact("GovTokenMock");
@@ -78,23 +78,23 @@ describe('Initialization', async () => {
 
     describe('addTokenAddresses', async () => {
         it('only admin', async () => {
-            await expectRevert(this.govInstance.addTokenAddresses(this.receiver, {from: this.receiver}), 'Only admins.');
+            await expectRevert(this.govInstance.addTokenAddresses(this.receiver, "0x0000000000000000000000000000000000000000", {from: this.receiver}), 'Only admins.');
         });
 
         it('already added', async () => {
-            await this.govInstance.addTokenAddresses(this.tokenInstance.address, {from: this.deployer});
-            await expectRevert(this.govInstance.addTokenAddresses(this.tokenInstance.address, {from: this.deployer}), 'This token is already governed.');
+            await this.govInstance.addTokenAddresses(this.tokenInstance.address, "0x0000000000000000000000000000000000000000", {from: this.deployer});
+            await expectRevert(this.govInstance.addTokenAddresses(this.tokenInstance.address, "0x0000000000000000000000000000000000000000", {from: this.deployer}), 'This token is already governed.');
         });
 
         it("not zero address", async () => {
-            await expectRevert(this.govInstance.addTokenAddresses("0x0000000000000000000000000000000000000000", {from: this.deployer}), 'Cannot add a zero address.');
+            await expectRevert(this.govInstance.addTokenAddresses("0x0000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000", {from: this.deployer}), 'Cannot add a zero address.');
         });
 
         it("success", async () => {
             (await this.govInstance.getTokensTotalSupplyMock.call()).should.bignumber.eq("0");
             (await this.govInstance.getTotalSupplyEpochMock.call()).should.bignumber.eq("1");
 
-            await this.govInstance.addTokenAddresses(this.tokenInstance.address, {from: this.deployer});
+            await this.govInstance.addTokenAddresses(this.tokenInstance.address, "0x0000000000000000000000000000000000000000", {from: this.deployer});
 
             (await this.govInstance.getTokensTotalSupplyMock.call()).should.bignumber.eq(await this.tokenInstance.totalSupply.call());
         });
@@ -110,8 +110,8 @@ describe('Initialization', async () => {
         });
 
         it("success", async () => {
-            await this.govInstance.addTokenAddresses(this.tokenInstance.address, {from: this.deployer});
-            await this.govInstance.addTokenAddresses(this.tokenRevInstance.address, {from: this.deployer});
+            await this.govInstance.addTokenAddresses(this.tokenInstance.address, "0x0000000000000000000000000000000000000000", {from: this.deployer});
+            await this.govInstance.addTokenAddresses(this.tokenRevInstance.address, "0x0000000000000000000000000000000000000000", {from: this.deployer});
             (await this.govInstance.getTokensTotalSupplyMock.call()).should.bignumber.eq("10000000000000000");
             (await this.govInstance.getTotalSupplyEpochMock.call()).should.bignumber.eq("1");
 
@@ -129,22 +129,27 @@ describe('Initialization', async () => {
 
     describe('setFeeParams', async () => {
         it('only admin', async () => {
-            await expectRevert(this.govInstance.setFeeParams(100, 110, {from: this.receiver}), 'Only admins.');
+            await expectRevert(this.govInstance.setFeeParams(100, 95, 90, 85, 80, 60, 110, {from: this.receiver}), 'Only admins.');
         });
 
         it('success', async () => {
-            await this.govInstance.setFeeParams(112, 155, {from: this.deployer});
+            await this.govInstance.setFeeParams(112, 111, 110, 109, 108, 107, 155, {from: this.deployer});
 
-            const {0: feeMultiplier, 1: feeDivisor} = await this.govInstance.getFeeParamsMock.call();
+            const {0: feeMultiplier, 1: fee6h, 2: fee1h, 3: fee10m, 4: fee2m, 5: feeMad, 6: feeDivisor} = await this.govInstance.getFeeParamsMock.call();
 
             feeMultiplier.should.bignumber.eq(new BN(112));
+            fee6h.should.bignumber.eq(new BN(111));
+            fee1h.should.bignumber.eq(new BN(110));
+            fee10m.should.bignumber.eq(new BN(109));
+            fee2m.should.bignumber.eq(new BN(108));
+            feeMad.should.bignumber.eq(new BN(107));
             feeDivisor.should.bignumber.eq(new BN(155));
         });
     });
 
     describe('setTokenMonetaryPolicy', async () => {
         it('only admin', async () => {
-            await expectRevert(this.govInstance.setTokenMonetaryPolicy(this.receiver, {from: this.receiver}), 'Only admins.');
+            await expectRevert(this.govInstance.setTokenMonetaryPolicy(this.receiver, "0x0000000000000000000000000000000000000000", {from: this.receiver}), 'Only admins.');
         });
     });
 
@@ -154,13 +159,13 @@ describe('Initialization', async () => {
         });
 
         it('missing allowance', async () => {
-            await this.govInstance.addTokenAddresses(this.tokenInstance.address, {from: this.deployer});
+            await this.govInstance.addTokenAddresses(this.tokenInstance.address, "0x0000000000000000000000000000000000000000", {from: this.deployer});
             await expectRevert(this.govInstance.mintStabForGov(this.tokenInstance.address, 1000, {from: this.deployer}), 'ERC20: decreased allowance below zero.');
         });
 
         it('success', async () => {
             await this.govInstance.increaseAllowance(this.govInstance.address, 1000, {from: this.deployer});
-            await this.govInstance.addTokenAddresses(this.tokenInstance.address, {from: this.deployer});
+            await this.govInstance.addTokenAddresses(this.tokenInstance.address, "0x0000000000000000000000000000000000000000", {from: this.deployer});
             const govPriceOracle = await OracleMock.new('govPrice');
             await govPriceOracle.storeData(UNIT.mul(new BN(8))); // 8USD = 1GOV.
             await this.govInstance.setTokenPriceOracle(govPriceOracle.address, {from: this.deployer});
@@ -182,14 +187,14 @@ describe('Initialization', async () => {
         });
 
         it('missing allowance', async () => {
-            await this.govInstance.addTokenAddresses(this.tokenInstance.address, {from: this.deployer});
+            await this.govInstance.addTokenAddresses(this.tokenInstance.address, "0x0000000000000000000000000000000000000000", {from: this.deployer});
             await expectRevert(this.govInstance.mintGovForStab(this.tokenInstance.address, 1000, {from: this.deployer}), 'Exceeds allowance.');
         });
 
         it('success', async () => {
             await this.tokenInstance.transfer(this.govInstance.address, 10000, {from: this.deployer});
             await this.tokenInstance.increaseAllowance(this.govInstance.address, 1000, {from: this.deployer});
-            await this.govInstance.addTokenAddresses(this.tokenInstance.address, {from: this.deployer});
+            await this.govInstance.addTokenAddresses(this.tokenInstance.address, "0x0000000000000000000000000000000000000000", {from: this.deployer});
             const govPriceOracle = await OracleMock.new('govPrice');
             await govPriceOracle.storeData(UNIT.mul(new BN(8))); // 8USD = 1GOV.
             await this.govInstance.setTokenPriceOracle(govPriceOracle.address, {from: this.deployer});
@@ -201,19 +206,43 @@ describe('Initialization', async () => {
             // Finally exchanges 1000 STAB for 400 gSTAB * 0.995 (fee).
             await this.govInstance.mintGovForStab(this.tokenInstance.address, 400, {from: this.deployer});
             (await this.govInstance.getTokensTotalSupplyMock.call()).should.bignumber.eq(UNIT.mul(new BN(5000000)).sub(new BN(400)));
-            (await this.govInstance.totalSupply.call()).should.bignumber.eq(UNIT.mul(new BN(100000000)).add(new BN(995)));
+            (await this.govInstance.totalSupply.call()).should.bignumber.eq(UNIT.mul(new BN(100000000)).add(new BN(997)));
         });
     });
 
     describe('exchangeStabForStab', async () => {
         it('from not whitelisted', async () => {
-            await this.govInstance.addTokenAddresses(this.tokenInstance.address, {from: this.deployer});
+            await this.govInstance.addTokenAddresses(this.tokenInstance.address, "0x0000000000000000000000000000000000000000", {from: this.deployer});
             await expectRevert(this.govInstance.exchangeStabForStab(this.tokenRevInstance.address, this.tokenInstance.address, 1), '\'from\' token is not governed by this contract.');
         });
 
         it('to not whitelisted', async () => {
-            await this.govInstance.addTokenAddresses(this.tokenInstance.address, {from: this.deployer});
+            await this.govInstance.addTokenAddresses(this.tokenInstance.address, "0x0000000000000000000000000000000000000000", {from: this.deployer});
             await expectRevert(this.govInstance.exchangeStabForStab(this.tokenInstance.address, this.tokenRevInstance.address, 1), '\'to\' token is not governed by this contract.');
+        });
+
+        it('success', async() => {
+            const monetary = new MonetaryPolicy(await this.govInstance.getMainMonetaryPolicyMock());
+            await this.govInstance.addTokenAddresses(this.tokenInstance.address, monetary.address, {from: this.deployer});
+            await this.govInstance.addTokenAddresses(this.tokenRevInstance.address, monetary.address, {from: this.deployer});
+            const timeInterval = await monetary.minRebaseTimeIntervalSec.call();
+            timeInterval.should.bignumber.eq(new BN(86400));
+            const latest = await time.latest();
+            const timeToRebase = timeInterval.sub(latest.mod(timeInterval));
+            const endOfRebase = timeInterval.sub(await monetary.rebaseWindowOffsetSec.call());
+            await time.increase(timeToRebase.add(endOfRebase).add(new BN(60))); // make sure 'normal fee' is applied.
+            await time.advanceBlock(); // produce a block with new time.
+            await this.tokenInstance.increaseAllowance(this.govInstance.address, 1000000000000000, {from: this.deployer});
+
+            (await this.tokenInstance.balanceOf(this.deployer)).should.bignumber.eq(new BN(5000000000000000));
+            (await this.tokenRevInstance.balanceOf(this.deployer)).should.bignumber.eq(new BN(5000000000000000));
+            (await this.tokenInstance.balanceOf(this.govInstance.address)).should.bignumber.eq(new BN(0));
+            (await this.govInstance.getTokensTotalSupplyMock()).should.bignumber.eq(new BN("10000000000000000"));
+            this.govInstance.exchangeStabForStab(this.tokenInstance.address, this.tokenRevInstance.address, 1000000000000000, {from: this.deployer});
+            (await this.tokenInstance.balanceOf(this.deployer)).should.bignumber.eq(new BN(4001600640256102));
+            (await this.tokenRevInstance.balanceOf(this.deployer)).should.bignumber.eq(new BN(5997000000000000));
+            (await this.tokenInstance.balanceOf(this.govInstance.address)).should.bignumber.eq(new BN(1399359743897));
+            (await this.govInstance.getTokensTotalSupplyMock()).should.bignumber.eq(new BN("10000000000000000"));
         });
     });
 });
