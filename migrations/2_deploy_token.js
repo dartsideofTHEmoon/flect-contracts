@@ -16,9 +16,9 @@ const UNIT = new BN(1).mul(new BN(10 ** 9));
 
 function networkToChainName(network) {
     switch (network) {
-        case "BinanceSmartChainMain":
+        case "bsc":
             return "BSC";
-        case "BinanceSmartChainTest":
+        case "bsc_test":
             return "TBSC";
         default:
             return "DEV";
