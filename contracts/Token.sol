@@ -241,11 +241,6 @@ contract Token is Initializable, IERC20Upgradeable, RebaseableUpgradeable, Conte
         _finalizeRebase();
         return _totalSupply;
     }
-
-    function transferToMonetaryPolicy(address sender, uint256 amount) external onlyMonetaryPolicy returns (bool) {
-        _transfer(sender, _msgSender(), amount);
-        return true;
-    }
     // ----- End of rebase state modifiers -----
 
     // ----- Public monetary policy actions -----

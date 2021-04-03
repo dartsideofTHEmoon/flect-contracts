@@ -70,7 +70,7 @@ contract ChainSwap is Context {
         // 1. User transfers own token to a monetary policy.
         // We use specially prepared send function which allows to skip approvals (only monetary policy can call it).
         uint256 baseValue = _stab.balanceOf(address(this));
-        _stab.transferToMonetaryPolicy(_msgSender(), amount);
+        _stab.transferFrom(_msgSender(), address(this), amount);
         uint256 amountBeforeFee = _stab.balanceOf(address(this)).sub(baseValue, "Amount after transfer is lower!");
         uint256 amountAfterFee = _applyFee(amountBeforeFee);
         _stab.burnMyTokens(amountAfterFee);

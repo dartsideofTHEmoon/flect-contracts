@@ -71,7 +71,7 @@ async function BeforeEach() {
     return [govInstance, tokenInstance, tokenRevInstance, deployer, receiver];
 }
 
-describe('Initialization', async () => {
+describe('GovToken', async () => {
     beforeEach(async () => {
         [this.govInstance, this.tokenInstance, this.tokenRevInstance, this.deployer, this.receiver] = await BeforeEach();
     });

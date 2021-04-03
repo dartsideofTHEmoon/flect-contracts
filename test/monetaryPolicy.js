@@ -71,7 +71,7 @@ describe('TokenMonetaryPolicy:setTokenPriceOracle', async () => {
     });
 });
 
-describe('Token:setTokenPriceOracle:accessControl', () => {
+describe('TokenMonetaryPolicy:setTokenPriceOracle:accessControl', () => {
     beforeEach(async () => {
         [this.tokenInstance, this.tokenRevInstance, this.monetaryPolicy, this.deployer, this.receiver] = await BeforeEach();
     });
@@ -96,7 +96,7 @@ describe('TokenMonetaryPolicy:setMcapOracle', async () => {
     });
 });
 
-describe('Token:setMcapOracle:accessControl', () => {
+describe('TokenMonetaryPolicy:setMcapOracle:accessControl', () => {
     beforeEach(async () => {
         [this.tokenInstance, this.tokenRevInstance, this.monetaryPolicy, this.deployer, this.receiver] = await BeforeEach();
     });
@@ -121,7 +121,7 @@ describe('TokenMonetaryPolicy:setOrchestrator', async () => {
     })
 });
 
-describe('Token:setOrchestrator:accessControl', () => {
+describe('TokenMonetaryPolicy:setOrchestrator:accessControl', () => {
     beforeEach(async () => {
         [this.tokenInstance, this.tokenRevInstance, this.monetaryPolicy, this.deployer, this.receiver] = await BeforeEach();
     });
@@ -156,7 +156,7 @@ describe('TokenMonetaryPolicy:setRebaseLag', async () => {
     })
 });
 
-describe('Token:setRebaseLag:accessControl', () => {
+describe('TokenMonetaryPolicy:setRebaseLag:accessControl', () => {
     beforeEach(async () => {
         [this.tokenInstance, this.tokenRevInstance, this.monetaryPolicy, this.deployer, this.receiver] = await BeforeEach();
     });
@@ -197,7 +197,7 @@ describe('TokenMonetaryPolicy:setRebaseTimingParameters', async () => {
     })
 });
 
-describe('Token:setRebaseTimingParameters:accessControl', () => {
+describe('TokenMonetaryPolicy:setRebaseTimingParameters:accessControl', () => {
     beforeEach(async () => {
         [this.tokenInstance, this.tokenRevInstance, this.monetaryPolicy, this.deployer, this.receiver] = await BeforeEach();
     });

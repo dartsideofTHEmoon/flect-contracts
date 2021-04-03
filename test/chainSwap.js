@@ -89,6 +89,7 @@ describe('ChainSwap', async () => {
             await this.tokenInstance.transfer(this.receiver, UNIT.mul(new BN(1000000)), {from: this.deployer});
             (await this.tokenInstance.balanceOf(this.receiver)).should.bignumber.eq(new BN(998399359743897));
             await this.tokenInstance.grantRole(MONETARY_POLICY_ROLE, this.chainSwapInstance.address, {from: this.deployer});
+            await this.tokenInstance.increaseAllowance(this.chainSwapInstance.address, 998399359743897, {from: this.receiver});
 
             expectEvent(await this.chainSwapInstance.migrateToOtherChainMock(this.tokenInstance.address, new BN(998399359743897),
                 'BSC', 'ADDRS_ON_A_NEW_CHAIN', 60 * 60, 1, {from: this.receiver}), 'MigrateRequest',
@@ -101,6 +102,7 @@ describe('ChainSwap', async () => {
             (await this.tokenInstance.balanceOf(this.receiver)).should.bignumber.eq(new BN(998399359743897));
             await this.tokenInstance.grantRole(MONETARY_POLICY_ROLE, this.chainSwapInstance.address, {from: this.deployer});
             await this.chainSwapInstance.setFeeParamsMock(999, 1000);
+            await this.tokenInstance.increaseAllowance(this.chainSwapInstance.address, 998399359743897, {from: this.receiver});
 
             expectEvent(await this.chainSwapInstance.migrateToOtherChainMock(this.tokenInstance.address, new BN(998399359743897),
                 'BSC', 'ADDRS_ON_A_NEW_CHAIN', 60 * 60, 1, {from: this.receiver}), 'MigrateRequest',
@@ -181,8 +183,8 @@ describe('ChainSwap', async () => {
 
             await this.chainSwapInstance.claimFromOtherChainMock(this.tokenInstance.address, 124,
                 this.receiver, 25000, 'BSC', 35, sig, signerAddr, {from: this.receiver});
-            expectRevert(this.chainSwapInstance.claimFromOtherChainMock(this.tokenInstance.address, 124, this.receiver,
-                25000, 'BSC', sig, signerAddr, {from: this.receiver}), 'Funds already claimed.');
+            expectRevert(this.chainSwapInstance.claimFromOtherChainMock(this.tokenInstance.address, 124,
+                this.receiver, 25000, 'BSC', 35, sig, signerAddr, {from: this.receiver}), 'Funds already claimed.');
             expect(await this.chainSwapInstance.areFundsClaimed(msgHash)).to.be.true;
         });
     });
