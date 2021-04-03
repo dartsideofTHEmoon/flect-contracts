@@ -86,7 +86,7 @@ module.exports = async function(deployer, network) {
     // deploy GovToken
     const govTokenInstance = await deployer.deploy(GovToken, monetaryPolicyInstance.address,
         [tokenInstance.address, tokenRevInstance.address]);
-    console.log('Governance token deployer', govTokenInstance.address);
+    console.log('Governance token deployed', govTokenInstance.address);
 
     // set up governance token roles for tokens
     await tokenInstance.grantRole("0x901ebb412049abe4673b7c942b9b01ba7e8a61bb1e7e0da5426bdcd9a7a3a7e3", govTokenInstance.address);
