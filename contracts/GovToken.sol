@@ -199,6 +199,23 @@ contract GovToken is Initializable, GovERC20Upgradeable, AccessControlUpgradeabl
     }
 
     /**
+    *  @notice Calculates amount of STAB received for particular amount of gov tokens for a total supply provided.
+    */
+    function getMintAmountForGov(uint256 startSupply, uint256 govAmount) internal view returns (uint256) {
+        uint256 govValue = govAmount.mul(getGovPrice());
+        uint256 stabRarity = startSupply.mul(UNIT).div(_tokensTotalSupply); // rarity parameter. When rarity > UNIT less STAB exists than gSTAB.
+        uint256 stabAmount = govValue.div(stabRarity);
+        return applyFee(stabAmount);
+    }
+
+    /**
+    *  @notice Calculates amount of STAB received for particular amount of gov tokens for a current total supply.
+    */
+    function getMintAmountForGov(uint256 govAmount) public view returns (uint256) {
+        return getMintAmountForGov(totalSupply(), govAmount);
+    }
+
+    /**
     * @notice _msgSender receives STAB token in exchange for gSTAB.
     */
     function mintStabForGov(Token token, uint256 govAmount) public {
@@ -211,12 +228,19 @@ contract GovToken is Initializable, GovERC20Upgradeable, AccessControlUpgradeabl
 
         updateTotalSupply(false);
 
-        uint256 govValue = govAmount.mul(getGovPrice());
-        uint256 stabRarity = startSupply.mul(UNIT).div(_tokensTotalSupply); // rarity parameter. When rarity > UNIT less STAB exists than gSTAB.
-        uint256 stabAmount = govValue.div(stabRarity);
-
-        token.mint(sender, applyFee(stabAmount)); // fee is burned (not minted) in that case.
+        uint256 tokenAmount = getMintAmountForGov(startSupply, govAmount);
+        token.mint(sender, tokenAmount); // fee is burned (not minted) in that case.
         updateTotalSupply(true); // update token total supply as mint changes it.
+    }
+
+    /**
+    *  @notice Calculates amount of GOV received for particular amount of STAB tokens.
+    */
+    function getMintAmountForStab(uint256 stabAmount) public view returns (uint256) {
+        uint256 stabRarity = totalSupply().mul(UNIT).div(_tokensTotalSupply); // rarity parameter. When rarity > UNIT less STAB exists than gSTAB.
+        uint256 stabValue = stabAmount.mul(stabRarity);
+        uint256 govAmount = stabValue.div(getGovPrice());
+        return applyFee(govAmount);
     }
 
     /**
@@ -230,11 +254,8 @@ contract GovToken is Initializable, GovERC20Upgradeable, AccessControlUpgradeabl
         token.transferFrom(_msgSender(), address(this), stabAmount);
         token.burnMyTokens(stabAmount);
 
-        uint256 stabRarity = totalSupply().mul(UNIT).div(_tokensTotalSupply); // rarity parameter. When rarity > UNIT less STAB exists than gSTAB.
-        uint256 stabValue = stabAmount.mul(stabRarity);
-        uint256 govAmount = stabValue.div(getGovPrice());
-
-        _mint(_msgSender(), applyFee(govAmount)); // fee is burned (not minted) in that case.
+        uint256 govAmount = getMintAmountForStab(stabAmount);
+        _mint(_msgSender(), govAmount); // fee is burned (not minted) in that case.
         updateTotalSupply(true);
     }
 
@@ -249,7 +270,7 @@ contract GovToken is Initializable, GovERC20Upgradeable, AccessControlUpgradeabl
         uint256 afterFee = applyRebaseAwareFee(fromAmount, timeLeft);
 
         fromStab.transferFrom(_msgSender(), address(this), fromAmount);
-        fromStab.burnMyTokens(afterFee); // keeps fee.
+        fromStab.burnMyTokens(afterFee); // keeps fee reduced by transfer fee (redistributed to stab holders).
 
         toStab.mint(_msgSender(), afterFee);
     }

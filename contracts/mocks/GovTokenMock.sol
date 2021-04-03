@@ -15,6 +15,10 @@ contract GovTokenMock is GovToken {
         return _tokensTotalSupply;
     }
 
+    function setTokensTotalSupplyMock(uint256 tokensTotalSupply_) public {
+        _tokensTotalSupply = tokensTotalSupply_;
+    }
+
     function getMainMonetaryPolicyMock() public view returns (TokenMonetaryPolicy) {
         return _mainMonetaryPolicy;
     }

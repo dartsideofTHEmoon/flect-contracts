@@ -153,6 +153,55 @@ describe('Initialization', async () => {
         });
     });
 
+    describe('getMintAmountForGov', async () => {
+        this.prepareGetMintAmountForGovTest = async (cls, govPrice, tokensSupply) => {
+            await cls.govInstance.setTokensTotalSupplyMock(tokensSupply);
+            const govPriceOracle = await OracleMock.new('govPrice');
+            await govPriceOracle.storeData(govPrice);
+            await cls.govInstance.setTokenPriceOracle(govPriceOracle.address, {from: cls.deployer});
+        }
+
+        it('gov supply greater, gov 1$', async () => {
+            await this.prepareGetMintAmountForGovTest(this, UNIT, UNIT.mul(new BN(1000000)));
+
+            (await this.govInstance.totalSupply.call()).should.bignumber.eq(UNIT.mul(new BN(100000000))); // 100 mln
+            (await this.govInstance.getMintAmountForGov(UNIT.mul(new BN(2500000)))).should.bignumber.eq(UNIT.mul(new BN(24925))); // 25k - fee in exchange for 2.5mln
+            (await this.govInstance.getMintAmountForGov(UNIT.mul(new BN(100000000000)))).should.bignumber.eq(UNIT.mul(new BN(997000000)));
+            (await this.govInstance.getMintAmountForGov(100)).should.bignumber.eq("0"); // to small amount 100 : 100 - fee -> 0
+            (await this.govInstance.getMintAmountForGov(1000)).should.bignumber.eq("9"); // 1000 : 100 - fee -> 9
+        });
+
+        it('gov supply greater, gov 4$', async () => {
+            await this.prepareGetMintAmountForGovTest(this, UNIT.mul(new BN(4)), UNIT.mul(new BN(1000000)));
+
+            (await this.govInstance.totalSupply.call()).should.bignumber.eq(UNIT.mul(new BN(100000000))); // 100 mln
+            (await this.govInstance.getMintAmountForGov(UNIT.mul(new BN(2500000)))).should.bignumber.eq(UNIT.mul(new BN(99700)));
+            (await this.govInstance.getMintAmountForGov(UNIT.mul(new BN(100000000000)))).should.bignumber.eq(UNIT.mul(new BN(3988000000)));
+            (await this.govInstance.getMintAmountForGov(100)).should.bignumber.eq("3"); // really small amount 4 * 100 : 100 - fee -> 3
+            (await this.govInstance.getMintAmountForGov(1000)).should.bignumber.eq("39"); // 4 * 1000 : 100 - fee -> 39
+        });
+
+        it('gov supply lower, gov 1$', async () => {
+            await this.prepareGetMintAmountForGovTest(this, UNIT, UNIT.mul(new BN(500000000)));
+
+            (await this.govInstance.totalSupply.call()).should.bignumber.eq(UNIT.mul(new BN(100000000))); // 100 mln
+            (await this.govInstance.getMintAmountForGov(UNIT.mul(new BN(25000)))).should.bignumber.eq(UNIT.mul(new BN(124625)));
+            (await this.govInstance.getMintAmountForGov(UNIT.mul(new BN(100000000000)))).should.bignumber.eq(UNIT.mul(new BN(498500000000)));
+            (await this.govInstance.getMintAmountForGov(100)).should.bignumber.eq("498");
+            (await this.govInstance.getMintAmountForGov(1000)).should.bignumber.eq("4985");
+        });
+
+        it('gov supply lower, gov 5$', async () => {
+            await this.prepareGetMintAmountForGovTest(this, UNIT.mul(new BN(5)), UNIT.mul(new BN(500000000)));
+
+            (await this.govInstance.totalSupply.call()).should.bignumber.eq(UNIT.mul(new BN(100000000))); // 100 mln
+            (await this.govInstance.getMintAmountForGov(UNIT.mul(new BN(25000)))).should.bignumber.eq(UNIT.mul(new BN(623125)));
+            (await this.govInstance.getMintAmountForGov(UNIT.mul(new BN(100000000000)))).should.bignumber.eq(UNIT.mul(new BN(2492500000000)));
+            (await this.govInstance.getMintAmountForGov(1)).should.bignumber.eq("24");
+            (await this.govInstance.getMintAmountForGov(1000)).should.bignumber.eq("24925");
+        });
+    });
+
     describe('mintStabForGov', async () => {
         it('only whitelisted', async () => {
             await expectRevert(this.govInstance.mintStabForGov(this.tokenInstance.address, 1000, {from: this.receiver}), 'Token is not governed by this contract.');
@@ -178,6 +227,55 @@ describe('Initialization', async () => {
             await this.govInstance.mintStabForGov(this.tokenInstance.address, 1000, {from: this.deployer});
             (await this.govInstance.getTokensTotalSupplyMock.call()).should.bignumber.eq(UNIT.mul(new BN(5000000)).add(new BN(398)));
             (await this.govInstance.totalSupply.call()).should.bignumber.eq(UNIT.mul(new BN(100000000)).sub(new BN(1000)));
+        });
+    });
+
+    describe('getMintAmountForStab', async () => {
+        this.prepareGetMintAmountForStabTest = async (cls, govPrice, tokensSupply) => {
+            await cls.govInstance.setTokensTotalSupplyMock(tokensSupply);
+            const govPriceOracle = await OracleMock.new('govPrice');
+            await govPriceOracle.storeData(govPrice);
+            await cls.govInstance.setTokenPriceOracle(govPriceOracle.address, {from: cls.deployer});
+        }
+
+        it('gov supply greater, gov 1$', async () => {
+            await this.prepareGetMintAmountForStabTest(this, UNIT, UNIT.mul(new BN(1000000)));
+
+            (await this.govInstance.totalSupply.call()).should.bignumber.eq(UNIT.mul(new BN(100000000))); // 100 mln
+            (await this.govInstance.getMintAmountForStab(UNIT.mul(new BN(2500000)))).should.bignumber.eq(UNIT.mul(new BN(249250000))); // 25k - fee in exchange for 2.5mln
+            (await this.govInstance.getMintAmountForStab(UNIT.mul(new BN(100000000000)))).should.bignumber.eq(UNIT.mul(new BN(9970000000000)));
+            (await this.govInstance.getMintAmountForStab(100)).should.bignumber.eq("9970");
+            (await this.govInstance.getMintAmountForStab(1000)).should.bignumber.eq("99700");
+        });
+
+        it('gov supply greater, gov 4$', async () => {
+            await this.prepareGetMintAmountForStabTest(this, UNIT.mul(new BN(4)), UNIT.mul(new BN(1000000)));
+
+            (await this.govInstance.totalSupply.call()).should.bignumber.eq(UNIT.mul(new BN(100000000))); // 100 mln
+            (await this.govInstance.getMintAmountForStab(UNIT.mul(new BN(2500000)))).should.bignumber.eq(UNIT.mul(new BN(62312500)));
+            (await this.govInstance.getMintAmountForStab(UNIT.mul(new BN(100000000000)))).should.bignumber.eq(UNIT.mul(new BN(2492500000000)));
+            (await this.govInstance.getMintAmountForStab(100)).should.bignumber.eq("2492");
+            (await this.govInstance.getMintAmountForStab(1000)).should.bignumber.eq("24925");
+        });
+
+        it('gov supply lower, gov 1$', async () => {
+            await this.prepareGetMintAmountForStabTest(this, UNIT, UNIT.mul(new BN(500000000)));
+
+            (await this.govInstance.totalSupply.call()).should.bignumber.eq(UNIT.mul(new BN(100000000))); // 100 mln
+            (await this.govInstance.getMintAmountForStab(UNIT.mul(new BN(25000)))).should.bignumber.eq(UNIT.mul(new BN(4985)));
+            (await this.govInstance.getMintAmountForStab(UNIT.mul(new BN(100000000000)))).should.bignumber.eq(UNIT.mul(new BN(19940000000)));
+            (await this.govInstance.getMintAmountForStab(100)).should.bignumber.eq("19");
+            (await this.govInstance.getMintAmountForStab(1000)).should.bignumber.eq("199");
+        });
+
+        it('gov supply lower, gov 5$', async () => {
+            await this.prepareGetMintAmountForStabTest(this, UNIT.mul(new BN(5)), UNIT.mul(new BN(500000000)));
+
+            (await this.govInstance.totalSupply.call()).should.bignumber.eq(UNIT.mul(new BN(100000000))); // 100 mln
+            (await this.govInstance.getMintAmountForStab(UNIT.mul(new BN(25000)))).should.bignumber.eq(UNIT.mul(new BN(997)));
+            (await this.govInstance.getMintAmountForStab(UNIT.mul(new BN(100000000000)))).should.bignumber.eq(UNIT.mul(new BN(3988000000)));
+            (await this.govInstance.getMintAmountForStab(100)).should.bignumber.eq("3");
+            (await this.govInstance.getMintAmountForStab(1000)).should.bignumber.eq("39");
         });
     });
 
