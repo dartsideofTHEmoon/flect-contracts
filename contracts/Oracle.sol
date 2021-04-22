@@ -29,7 +29,7 @@ contract Oracle is IOracle, AccessControl {
 
     function addNewData(uint256 newData) external onlyOracleUpdater {
         pastData[dataIndex] = newData;
-        dataIndex = (dataIndex + 1) % pastData.length;
+        dataIndex = (dataIndex + 1) % uint8(pastData.length);
     }
 
     function getData() external override view returns (uint256, bool) {
