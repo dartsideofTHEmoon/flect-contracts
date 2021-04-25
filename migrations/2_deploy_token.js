@@ -25,7 +25,6 @@ function networkToChainName(network) {
     }
 }
 
-// JavaScript export
 module.exports = async function(deployer, network) {
     console.log("Deploying to", network);
 

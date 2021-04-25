@@ -2,8 +2,9 @@
 
 BSC testnet deployed to:
 ```
-Token STAB deployed 0xB1480279dAA8e7619ACa53a8004B6B45F3B15958
-Token rSTAB deployed 0x6dAb76f34aC8cc56ad5a14AEDe0820684BACc64a
-Monetary Policy deployed 0x628D8445C3ea0595Ff2de9782acfE62194Bd135A
-Governance token deployed 0x67DefF5407AA16E202511683097a5e90c0cC6749
+Token STAB deployed 0xB2eafee972d7F18c48F6ea843F4c3dEad49E4c17
+Token rSTAB deployed 0x37C9B540Bf086b31c5CCdd52fBC597705809F7fe
+Monetary Policy deployed 0xF79641Ac56e5E0C633Ec2fb2d5015b154bA7CFD0
+Governance token deployed 0x12c913c904De3D09cae3bf69e55F759917f99D95
+MCAP oracle deployed 0xe7c51d5ce5E3dd1D8c5a0AE49dFE39BC0B6b2998
 ```
