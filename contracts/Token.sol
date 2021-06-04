@@ -12,7 +12,6 @@ import "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import "./utils/SafeMathInt.sol";
 import "./utils/UInt256Lib.sol";
-import "./utils/EnumerableFifo.sol";
 import "./utils/Rebaseable.sol";
 import "./ChainSwap.sol";
 
@@ -22,7 +21,6 @@ contract Token is Initializable, IERC20Upgradeable, RebaseableUpgradeable, Conte
     using SafeMathInt for int256;
     using UInt256Lib for uint256;
     using AddressUpgradeable for address;
-    using EnumerableFifo for EnumerableFifo.U32ToU256Queue;
     using EnumerableSetUpgradeable for EnumerableSetUpgradeable.AddressSet;
 
     // I. Base ERC20 variables
@@ -42,7 +40,7 @@ contract Token is Initializable, IERC20Upgradeable, RebaseableUpgradeable, Conte
 
     // III. Variables responsible for keeping user account balances
     mapping(address => mapping(address => uint256)) private _allowances;
-    mapping(address => EnumerableFifo.U32ToU256Queue) private _netShareOwned;
+    mapping(address => uint256) private _netShareOwned;
     mapping(address => uint256) private _tokenOwned;
 
     // IV. Variables responsible for keeping address 'types'
@@ -84,7 +82,7 @@ contract Token is Initializable, IERC20Upgradeable, RebaseableUpgradeable, Conte
 
         //Set up roles.
         address owner = _msgSender();
-        _netShareOwned[owner].add(_epoch, _reflectionTotal);
+        _netShareOwned[owner] = _netShareOwned[owner].add(_reflectionTotal);
         _included.add(owner);
         _setupRole(DEFAULT_ADMIN_ROLE, owner);
         _setupRole(MONETARY_POLICY_ROLE, owner);
@@ -148,7 +146,7 @@ contract Token is Initializable, IERC20Upgradeable, RebaseableUpgradeable, Conte
 
     function balanceOf(address account) external view override returns (uint256) {
         if (_excluded.contains(account)) return _tokenOwned[account];
-        return tokenFromReflection(_netShareOwned[account].getSum());
+        return tokenFromReflection(_netShareOwned[account]);
     }
 
     function allowance(address owner, address spender) external view override returns (uint256) {
@@ -218,19 +216,7 @@ contract Token is Initializable, IERC20Upgradeable, RebaseableUpgradeable, Conte
         valuesArray[3] = UNIT;
 
         int256 supplyChange = 0;
-        for (uint256 i = 0; i < _included.length(); i++) {
-            int256 userSupplyChange = _netShareOwned[_included.at(i)].rebaseUserFunds(maxIncentiveEpoch, _decreasePerEpoch, maxFactor, valuesArray);
-            supplyChange = supplyChange.add(userSupplyChange);
-        }
-
-        for (uint256 i = 0; i < _excluded.length(); i++) {
-            uint256 owned = _tokenOwned[_excluded.at(i)];
-            uint256 newOwned = EnumerableFifo.adjustValue(owned, UNIT, valuesArray, true);
-            _tokenOwned[_excluded.at(i)] = newOwned;
-            supplyChange = supplyChange.add(newOwned.toInt256Safe().sub(owned.toInt256Safe()));
-
-            _netShareOwned[_excluded.at(i)].rebaseUserFunds(~uint32(0), 0, UNIT, valuesArray);
-        }
+        // TODO impl rebase
 
         if (supplyChange >= 0) {
             _totalSupply = _totalSupply.add(uint256(supplyChange));
@@ -250,10 +236,9 @@ contract Token is Initializable, IERC20Upgradeable, RebaseableUpgradeable, Conte
         }
         uint256 amountFixed = amount.mul(_getRate());
         _reflectionTotal = _reflectionTotal.add(amountFixed);
-        _netShareOwned[owner].add(_epoch, amountFixed);
-        _netShareOwned[owner].flatten(_getMinEpoch());
+        _netShareOwned[owner] = _netShareOwned[owner].add(amountFixed);
         if (_excluded.contains(owner)) {
-            _tokenOwned[owner] = tokenFromReflection(_netShareOwned[owner].getSum());
+            _tokenOwned[owner] = tokenFromReflection(_netShareOwned[owner]);
         }
         _totalSupply = _totalSupply.add(amount);
 
@@ -263,14 +248,13 @@ contract Token is Initializable, IERC20Upgradeable, RebaseableUpgradeable, Conte
     function _burn(address owner, uint256 amount) internal {
         uint256 amountFixed = amount.mul(_getRate());
         _reflectionTotal = _reflectionTotal.sub(amountFixed);
-        _netShareOwned[owner].sub(amountFixed);
-        uint256 leftFunds = _netShareOwned[owner].getSum();
+        _netShareOwned[owner] = _netShareOwned[owner].sub(amountFixed);
         if (_excluded.contains(owner)) {
-            _tokenOwned[owner] = tokenFromReflection(_netShareOwned[owner].getSum());
-            if (leftFunds == 0) {
+            _tokenOwned[owner] = tokenFromReflection(_netShareOwned[owner]);
+            if (_netShareOwned[owner] == 0) {
                 _excluded.remove(owner);
             }
-        } else if (leftFunds == 0) {
+        } else if (_netShareOwned[owner] == 0) {
             _included.remove(owner);
         }
 
@@ -313,9 +297,8 @@ contract Token is Initializable, IERC20Upgradeable, RebaseableUpgradeable, Conte
 
     function excludeAccount(address account) public onlyAdmin {
         require(!_excluded.contains(account), "Is excluded");
-        uint256 reflectionOwned = _netShareOwned[account].getSum();
-        if (reflectionOwned > 0) {
-            _tokenOwned[account] = tokenFromReflection(reflectionOwned);
+        if (_netShareOwned[account] > 0) {
+            _tokenOwned[account] = tokenFromReflection(_netShareOwned[account]);
             _included.remove(account);
         }
         _excluded.add(account);
@@ -366,11 +349,9 @@ contract Token is Initializable, IERC20Upgradeable, RebaseableUpgradeable, Conte
                 _included.add(recipient);
             }
 
-            if (_netShareOwned[sender].getSum() == 0) {
+            if (_netShareOwned[sender] == 0) {
                 _included.remove(sender);
                 delete _netShareOwned[sender];
-            } else {
-                _netShareOwned[sender].flatten(_getMinEpoch());
             }
         }
     }
@@ -378,11 +359,11 @@ contract Token is Initializable, IERC20Upgradeable, RebaseableUpgradeable, Conte
     function _transferStandard(address sender, address recipient, uint256 tAmount) private {
         (uint256 rAmount, uint256 rTransferAmount, uint256 rFee, uint256 tTransferAmount, uint256 tFee, bool wipeSenderAmount) = _getValues(tAmount, sender);
         if (wipeSenderAmount) {
-            _netShareOwned[sender].sub(_netShareOwned[sender].getSum());
+            _netShareOwned[sender] = _netShareOwned[sender].sub(_netShareOwned[sender]);
         } else {
-            _netShareOwned[sender].sub(rAmount);
+            _netShareOwned[sender] = _netShareOwned[sender].sub(rAmount);
         }
-        _netShareOwned[recipient].add(_epoch, rTransferAmount);
+        _netShareOwned[recipient] = _netShareOwned[recipient].add(rTransferAmount);
         _reflectFee(rFee, tFee);
         emit Transfer(sender, recipient, tTransferAmount);
     }
@@ -390,12 +371,12 @@ contract Token is Initializable, IERC20Upgradeable, RebaseableUpgradeable, Conte
     function _transferToExcluded(address sender, address recipient, uint256 tAmount) private {
         (uint256 rAmount, uint256 rTransferAmount, uint256 rFee, uint256 tTransferAmount, uint256 tFee, bool wipeSenderAmount) = _getValues(tAmount, sender);
         if (wipeSenderAmount) {
-            _netShareOwned[sender].sub(_netShareOwned[sender].getSum());
+            _netShareOwned[sender] = _netShareOwned[sender].sub(_netShareOwned[sender]);
         } else {
-            _netShareOwned[sender].sub(rAmount);
+            _netShareOwned[sender] = _netShareOwned[sender].sub(rAmount);
         }
         _tokenOwned[recipient] = _tokenOwned[recipient].add(tTransferAmount);
-        _netShareOwned[recipient].add(_epoch, rTransferAmount);
+        _netShareOwned[recipient] = _netShareOwned[recipient].add(rTransferAmount);
         _reflectFee(rFee, tFee);
         emit Transfer(sender, recipient, tTransferAmount);
     }
@@ -403,8 +384,8 @@ contract Token is Initializable, IERC20Upgradeable, RebaseableUpgradeable, Conte
     function _transferFromExcluded(address sender, address recipient, uint256 tAmount) private {
         (uint256 rAmount, uint256 rTransferAmount, uint256 rFee, uint256 tTransferAmount, uint256 tFee,) = _getValues(tAmount, sender);
         _tokenOwned[sender] = _tokenOwned[sender].sub(tAmount);
-        _netShareOwned[sender].sub(rAmount);
-        _netShareOwned[recipient].add(_epoch, rTransferAmount);
+        _netShareOwned[sender] = _netShareOwned[sender].sub(rAmount);
+        _netShareOwned[recipient] = _netShareOwned[recipient].add(rTransferAmount);
         _reflectFee(rFee, tFee);
         emit Transfer(sender, recipient, tTransferAmount);
     }
@@ -412,9 +393,9 @@ contract Token is Initializable, IERC20Upgradeable, RebaseableUpgradeable, Conte
     function _transferBothExcluded(address sender, address recipient, uint256 tAmount) private {
         (uint256 rAmount, uint256 rTransferAmount, uint256 rFee, uint256 tTransferAmount, uint256 tFee,) = _getValues(tAmount, sender);
         _tokenOwned[sender] = _tokenOwned[sender].sub(tAmount);
-        _netShareOwned[sender].sub(rAmount);
+        _netShareOwned[sender] = _netShareOwned[sender].sub(rAmount);
         _tokenOwned[recipient] = _tokenOwned[recipient].add(tTransferAmount);
-        _netShareOwned[recipient].add(_epoch, rTransferAmount);
+        _netShareOwned[recipient] = _netShareOwned[recipient].add(rTransferAmount);
         _reflectFee(rFee, tFee);
         emit Transfer(sender, recipient, tTransferAmount);
     }
@@ -430,7 +411,7 @@ contract Token is Initializable, IERC20Upgradeable, RebaseableUpgradeable, Conte
 
         uint256 additionalFee = 0;
         if (_included.contains(sender)) {
-            uint256 tokenRef = _netShareOwned[sender].getSum();
+            uint256 tokenRef = _netShareOwned[sender];
             uint256 tokenFunds = tokenRef.div(currentRate).sub(tAmount);
             if (tokenFunds < UNIT) {
                 additionalFee = tokenFunds;
@@ -462,8 +443,8 @@ contract Token is Initializable, IERC20Upgradeable, RebaseableUpgradeable, Conte
         uint256 rSupply = reflectionTotal_;
         uint256 tSupply = _totalSupply;
         for (uint256 i = 0; i < _excluded.length(); i++) {
-            if (_netShareOwned[_excluded.at(i)].getSum() > rSupply || _tokenOwned[_excluded.at(i)] > tSupply) return (reflectionTotal_, _totalSupply);
-            rSupply = rSupply.sub(_netShareOwned[_excluded.at(i)].getSum());
+            if (_netShareOwned[_excluded.at(i)] > rSupply || _tokenOwned[_excluded.at(i)] > tSupply) return (reflectionTotal_, _totalSupply);
+            rSupply = rSupply.sub(_netShareOwned[_excluded.at(i)]);
             tSupply = tSupply.sub(_tokenOwned[_excluded.at(i)]);
         }
         if (rSupply < reflectionTotal_.div(_totalSupply)) return (reflectionTotal_, _totalSupply);
