@@ -239,43 +239,29 @@ describe('Rebase parameters', async () => {
     it('Test rebase factors', async () => {
         const exchangePrice = toUnitsDenomination(11);
         const targetPrice = toUnitsDenomination(7);
-        const values = await this.instance._getRebaseFactorsMock.call(exchangePrice, targetPrice, 5);
-        const {0: minEpoch, 1: currentNetMultiplier, 2: maxFactor} = values;
+        const currentNetMultiplier = await this.instance._getRebaseFactorsMock.call(exchangePrice, targetPrice, 5);
 
-        minEpoch.eq(1);
         currentNetMultiplier.should.bignumber.eq(new BN(1114285714));
-        maxFactor.should.bignumber.eq(UNIT);
     });
 
     it('Test rebase factors (more epochs)', async () => {
         await this.instance._setEpochMock(13);
-        const decreasePerEpoch = await this.instance._getDecreasePerEpochMock();
 
         const exchangePrice = toUnitsDenomination(7);
         const targetPrice = toUnitsDenomination(11);
-        const values = await this.instance._getRebaseFactorsMock.call(exchangePrice, targetPrice, 5);
-        const {0: minEpoch, 1: currentNetMultiplier, 2: maxFactor} = values;
+        const currentNetMultiplier = await this.instance._getRebaseFactorsMock.call(exchangePrice, targetPrice, 5);
 
-        minEpoch.eq(1);
         currentNetMultiplier.should.bignumber.eq(new BN(927272728));
-        maxFactor.should.bignumber.eq(UNIT.add(new BN(decreasePerEpoch * (13 - 1))));
     });
 
     it('Test rebase factor (max incentive)', async () => {
         await this.instance._setEpochMock(500);
-        const decreasePerEpoch = await this.instance._getDecreasePerEpochMock();
-        const maxIncetive = await this.instance._getMaxIncentiveMock();
-        const maxHistoryLen = await this.instance._getMaxHistoryLenMock();
 
         const exchangePrice = toUnitsDenomination(150);
         const targetPrice = toUnitsDenomination(123);
-        const values = await this.instance._getRebaseFactorsMock.call(exchangePrice, targetPrice, 5);
-        const {0: minEpoch, 1: currentNetMultiplier, 2: maxFactor} = values;
+        const currentNetMultiplier = await this.instance._getRebaseFactorsMock.call(exchangePrice, targetPrice, 5);
 
-        minEpoch.eq(1);
         currentNetMultiplier.should.bignumber.eq(new BN(1043902439));
-        maxFactor.should.bignumber.eq(UNIT.add(new BN(decreasePerEpoch * maxHistoryLen)));
-        maxFactor.should.bignumber.eq(maxIncetive);
     });
 
     it('Test simple positive rebase', async () => {
@@ -287,6 +273,22 @@ describe('Rebase parameters', async () => {
 
         (await this.instance.totalSupply()).should.bignumber.eq(new BN(5090909090000000));
         (await this.instance.balanceOf(this.deployer)).should.bignumber.eq(new BN(5090909090000000));
+    });
+
+    it('Test simple positive rebase (with fee)', async () => {
+        const exchangePrice = toUnitsDenomination(12);
+        const targetPrice = toUnitsDenomination(11);
+
+        await this.instance.grantRole(MONETARY_POLICY_ROLE, this.deployer, {from: this.deployer});
+        await this.instance.transfer(this.receiver, INTIAL_SUPPLY.div(new BN(2)), {from: this.deployer});
+        (await this.instance.balanceOf(this.receiver)).should.bignumber.eq(new BN(2497497497497497));
+        (await this.instance.balanceOf(this.deployer)).should.bignumber.eq(new BN(2502502502502502));
+        await this.instance.rebase(exchangePrice, targetPrice, 5, {from: this.deployer});
+
+        (await this.instance.totalSupply()).should.bignumber.eq(new BN(5090909090000000));
+
+        (await this.instance.balanceOf(this.receiver)).should.bignumber.eq(new BN(2542906542452452));
+        (await this.instance.balanceOf(this.deployer)).should.bignumber.eq(new BN(2548002547547547));
     });
 
     it('Test simple positive rebase with leverage', async () => {
@@ -327,6 +329,7 @@ describe('Rebase parameters', async () => {
         await this.instance.transfer(this.receiver, INTIAL_SUPPLY.div(new BN(2)), {from: this.deployer});
         (await this.instance.balanceOf(this.deployer)).should.bignumber.eq(new BN(2500000000000000));
         (await this.instance.balanceOf(this.receiver)).should.bignumber.eq(new BN(2500000000000000));
+        (await this.instance.totalSupply()).should.bignumber.eq(new BN(5000000000000000));
 
         const exchangePrice = toUnitsDenomination(15);
         const targetPrice = toUnitsDenomination(10);
@@ -335,18 +338,18 @@ describe('Rebase parameters', async () => {
 
         (await this.instance.balanceOf(this.deployer)).should.bignumber.eq(new BN(3750000000000000));
         (await this.instance.balanceOf(this.receiver)).should.bignumber.eq(new BN(3757515030060120));
-        (await this.instance.totalSupply()).should.bignumber.eq(new BN(7507515030060120));
+        (await this.instance.totalSupply()).should.bignumber.eq(new BN(7500000000000000));
 
         await this.instance.includeAccount(this.deployer, {from: this.deployer});
-        (await this.instance.balanceOf(this.deployer)).should.bignumber.eq(new BN(3757515030060120));
+        (await this.instance.balanceOf(this.deployer)).should.bignumber.eq(new BN(3750000000000000));
         (await this.instance.balanceOf(this.receiver)).should.bignumber.eq(new BN(3750000000000000));
-        (await this.instance.totalSupply()).should.bignumber.eq(new BN(7507515030060120));
+        (await this.instance.totalSupply()).should.bignumber.eq(new BN(7500000000000000));
 
         await this.instance.excludeAccount(this.receiver, {from: this.deployer});
         await this.instance.excludeAccount(this.deployer, {from: this.deployer});
         (await this.instance.balanceOf(this.deployer)).should.bignumber.eq(new BN(3757515030060120));
         (await this.instance.balanceOf(this.receiver)).should.bignumber.eq(new BN(3750000000000000));
-        (await this.instance.totalSupply()).should.bignumber.eq(new BN(7507515030060120));
+        (await this.instance.totalSupply()).should.bignumber.eq(new BN(7500000000000000));
     });
 });
 

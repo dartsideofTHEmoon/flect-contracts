@@ -34,7 +34,7 @@ contract Token is Initializable, IERC20Upgradeable, RebaseableUpgradeable, Conte
     uint256 private constant _initialTotalSupply = 5 * 10 ** 6 * UNIT;
     uint256 private _totalSupply; // = _initialTotalSupply;
     uint256 internal _reflectionTotal; // = MAX - (MAX % _totalSupply);
-    uint256 internal constant _reflectionPerToken = (MAX - (MAX % _initialTotalSupply)) / _initialTotalSupply;
+    uint256 internal _reflectionPerToken; // = (MAX - (MAX % _initialTotalSupply)) / _initialTotalSupply;
     // Fees since beginning of an epoch.
     uint256 private _transactionFeeEpoch; // = 0;
 
@@ -79,6 +79,7 @@ contract Token is Initializable, IERC20Upgradeable, RebaseableUpgradeable, Conte
         _reflectionTotal = MAX - (MAX % _totalSupply);
         _transactionFeeEpoch = 0;
         _epoch = 1;
+        _reflectionPerToken = (MAX - (MAX % _initialTotalSupply)) / _initialTotalSupply;
 
         //Set up roles.
         address owner = _msgSender();
@@ -202,29 +203,21 @@ contract Token is Initializable, IERC20Upgradeable, RebaseableUpgradeable, Conte
 
     // ----- Public rebase state modifiers -----
     function rebase(uint256 exchangeRate, uint256 targetRate, int256 rebaseLag) external override onlyMonetaryPolicy returns (uint256) {
-        if (targetRate == exchangeRate) {
-            _finalizeRebase();
-            return _totalSupply;
+        uint256 currentNetMultiplier = _getRebaseFactors(exchangeRate, targetRate, rebaseLag);
+        _totalSupply = _totalSupply.mul(currentNetMultiplier).div(UNIT);
+
+        // Loop through excluded accounts (PancakeSwap, Uniswap etc).
+        // Number of them should be really small - maximum couple of exchanges, address of owners etc.
+        for (uint256 i = 0; i < _excluded.length(); i++) {
+            uint256 owned = _tokenOwned[_excluded.at(i)];
+            _tokenOwned[_excluded.at(i)] = owned.mul(currentNetMultiplier).div(UNIT);
         }
 
-        (uint32 maxIncentiveEpoch, uint256 currentNetMultiplier, uint256 maxFactor) = _getRebaseFactors(exchangeRate, targetRate, rebaseLag);
+        // End rebase
+        emit LogRebase(_epoch, _totalSupply, _transactionFeeEpoch);
+        ++_epoch;
+        _transactionFeeEpoch = 0;
 
-        uint256[4] memory valuesArray;
-        valuesArray[0] = _getRate();
-        valuesArray[1] = _getPostRebaseRate();
-        valuesArray[2] = currentNetMultiplier;
-        valuesArray[3] = UNIT;
-
-        int256 supplyChange = 0;
-        // TODO impl rebase
-
-        if (supplyChange >= 0) {
-            _totalSupply = _totalSupply.add(uint256(supplyChange));
-        } else {
-            _totalSupply = _totalSupply.sub(uint256(- supplyChange));
-        }
-
-        _finalizeRebase();
         return _totalSupply;
     }
     // ----- End of rebase state modifiers -----
@@ -359,7 +352,7 @@ contract Token is Initializable, IERC20Upgradeable, RebaseableUpgradeable, Conte
     function _transferStandard(address sender, address recipient, uint256 tAmount) private {
         (uint256 rAmount, uint256 rTransferAmount, uint256 rFee, uint256 tTransferAmount, uint256 tFee, bool wipeSenderAmount) = _getValues(tAmount, sender);
         if (wipeSenderAmount) {
-            _netShareOwned[sender] = _netShareOwned[sender].sub(_netShareOwned[sender]);
+            _netShareOwned[sender] = 0;
         } else {
             _netShareOwned[sender] = _netShareOwned[sender].sub(rAmount);
         }
@@ -371,7 +364,7 @@ contract Token is Initializable, IERC20Upgradeable, RebaseableUpgradeable, Conte
     function _transferToExcluded(address sender, address recipient, uint256 tAmount) private {
         (uint256 rAmount, uint256 rTransferAmount, uint256 rFee, uint256 tTransferAmount, uint256 tFee, bool wipeSenderAmount) = _getValues(tAmount, sender);
         if (wipeSenderAmount) {
-            _netShareOwned[sender] = _netShareOwned[sender].sub(_netShareOwned[sender]);
+            _netShareOwned[sender] = 0;
         } else {
             _netShareOwned[sender] = _netShareOwned[sender].sub(rAmount);
         }
@@ -436,7 +429,7 @@ contract Token is Initializable, IERC20Upgradeable, RebaseableUpgradeable, Conte
 
     function _getRate() private view returns (uint256) {
         (uint256 rSupply, uint256 tSupply) = _getCurrentSupply(_reflectionTotal);
-        return rSupply.div(tSupply);
+        return rSupply.div(tSupply); // wynik musi sie zmniejszyc, czyli rSupply -, albo tSupply +
     }
 
     function _getCurrentSupply(uint256 reflectionTotal_) private view returns (uint256, uint256) {
@@ -461,11 +454,7 @@ contract Token is Initializable, IERC20Upgradeable, RebaseableUpgradeable, Conte
     }
 
     // ----- Private rebase state modifiers -----
-    function _getRebaseFactors(uint256 exchangeRate, uint256 targetRate, int256 rebaseLag) internal view returns (uint32, uint256, uint256) {
-        // 1. minEpoch
-        uint32 minEpoch = _getMinEpoch();
-
-        // 2. currentNetMultiplier
+    function _getRebaseFactors(uint256 exchangeRate, uint256 targetRate, int256 rebaseLag) internal pure returns (uint256) {
         int256 targetRateSigned = targetRate.toInt256Safe();
         // (exchangeRate - targetRate) / targetRate => multiplier in <-UNIT, UNIT> range.
         int256 rebaseDelta = UNIT.toInt256Safe().mul(exchangeRate.toInt256Safe().sub(targetRateSigned)).div(targetRateSigned);
@@ -479,20 +468,7 @@ contract Token is Initializable, IERC20Upgradeable, RebaseableUpgradeable, Conte
             currentNetMultiplier = uint256(UNIT.toInt256Safe().sub(rebaseDelta.mul(rebaseLag))); // sub negative number = add
         }
 
-        // 3. maxFactor
-        require(_epoch >= minEpoch);
-        uint32 epochsFromMin = _epoch - minEpoch;
-        uint256 maxFactor = UNIT.add(_decreasePerEpoch.mul(epochsFromMin));
-
-        return (minEpoch, currentNetMultiplier, maxFactor);
-    }
-
-    function _finalizeRebase() internal {
-        emit LogRebase(_epoch, _totalSupply, _transactionFeeEpoch);
-        ++_epoch;
-        _transactionFeeEpoch = 0;
-
-        _reflectionTotal = _totalSupply.mul(_reflectionPerToken);
+        return currentNetMultiplier;
     }
 
     function _getPostRebaseRate() private view returns (uint256) {
