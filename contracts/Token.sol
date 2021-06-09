@@ -204,7 +204,7 @@ contract Token is Initializable, IERC20Upgradeable, RebaseableUpgradeable, Conte
     // ----- Public rebase state modifiers -----
     function rebase(uint256 exchangeRate, uint256 targetRate, int256 rebaseLag) external override onlyMonetaryPolicy returns (uint256) {
         uint256 currentNetMultiplier = _getRebaseFactors(exchangeRate, targetRate, rebaseLag);
-        _totalSupply = _totalSupply.mul(currentNetMultiplier).div(UNIT);
+        _totalSupply = _totalSupply.add(_transactionFeeEpoch).mul(currentNetMultiplier).div(UNIT);
 
         // Loop through excluded accounts (PancakeSwap, Uniswap etc).
         // Number of them should be really small - maximum couple of exchanges, address of owners etc.

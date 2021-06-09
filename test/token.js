@@ -337,19 +337,19 @@ describe('Rebase parameters', async () => {
         await this.instance.rebase(exchangePrice, targetPrice, 1, {from: this.deployer});
 
         (await this.instance.balanceOf(this.deployer)).should.bignumber.eq(new BN(3750000000000000));
-        (await this.instance.balanceOf(this.receiver)).should.bignumber.eq(new BN(3757515030060120));
-        (await this.instance.totalSupply()).should.bignumber.eq(new BN(7500000000000000));
+        (await this.instance.balanceOf(this.receiver)).should.bignumber.eq(new BN(3757500000000000));
+        (await this.instance.totalSupply()).should.bignumber.eq(new BN(7507500000000000));
 
         await this.instance.includeAccount(this.deployer, {from: this.deployer});
-        (await this.instance.balanceOf(this.deployer)).should.bignumber.eq(new BN(3750000000000000));
-        (await this.instance.balanceOf(this.receiver)).should.bignumber.eq(new BN(3750000000000000));
-        (await this.instance.totalSupply()).should.bignumber.eq(new BN(7500000000000000));
+        (await this.instance.balanceOf(this.deployer)).should.bignumber.eq(new BN(3757507507507507));
+        (await this.instance.balanceOf(this.receiver)).should.bignumber.eq(new BN(3749992492492492));
+        (await this.instance.totalSupply()).should.bignumber.eq(new BN(7507500000000000));
 
         await this.instance.excludeAccount(this.receiver, {from: this.deployer});
         await this.instance.excludeAccount(this.deployer, {from: this.deployer});
-        (await this.instance.balanceOf(this.deployer)).should.bignumber.eq(new BN(3757515030060120));
-        (await this.instance.balanceOf(this.receiver)).should.bignumber.eq(new BN(3750000000000000));
-        (await this.instance.totalSupply()).should.bignumber.eq(new BN(7500000000000000));
+        (await this.instance.balanceOf(this.deployer)).should.bignumber.eq(new BN(3757507507507508));
+        (await this.instance.balanceOf(this.receiver)).should.bignumber.eq(new BN(3749992492492492));
+        (await this.instance.totalSupply()).should.bignumber.eq(new BN(7507500000000000));
     });
 });
 
